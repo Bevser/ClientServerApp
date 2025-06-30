@@ -1,180 +1,120 @@
 #include "tcpserver.h"
+#include "tcpclient.h" // Убедитесь, что этот include есть
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonParseError>
 
 TcpServer::TcpServer(QObject *parent)
-    : QObject(parent), m_tcpServer(nullptr)
-{
+    : IServer(parent), m_tcpServer(nullptr) {
 }
 
-TcpServer::~TcpServer()
-{
-    stopServer();
+TcpServer::~TcpServer() {
 }
 
-void TcpServer::startServer(quint16 port)
-{
+int TcpServer::clientCount() const {
+    return m_clients.size();
+}
+
+void TcpServer::startServer(quint16 port) {
     if (m_tcpServer && m_tcpServer->isListening()) {
         emit logMessage("Сервер уже запущен.");
         return;
     }
 
     m_tcpServer = new QTcpServer(this);
-    connect(m_tcpServer, &QTcpServer::newConnection, this, &::TcpServer::handleNewConnection);
+    connect(m_tcpServer, &QTcpServer::newConnection, this, &TcpServer::handleNewConnection);
 
     if (!m_tcpServer->listen(QHostAddress::Any, port)) {
         emit logMessage(QString("Ошибка запуска сервера: %1").arg(m_tcpServer->errorString()));
-        delete m_tcpServer;
+        m_tcpServer->deleteLater();
         m_tcpServer = nullptr;
     } else {
         emit logMessage(QString("Сервер запущен на порту %1").arg(port));
     }
 }
 
-void TcpServer::stopServer()
-{
+void TcpServer::stopServer() {
     if (!m_tcpServer || !m_tcpServer->isListening()) {
+        emit logMessage("Сервер уже остановлен.");
         return;
     }
 
-    // Отключаем всех клиентов
-    for (const auto& clientEntry : m_clients) {
-        if (clientEntry.client) {
-            clientEntry.client->disconnect();
-            clientEntry.client->deleteLater();
-        }
-    }
-
-    m_clients.clear();
     m_tcpServer->close();
     m_tcpServer->deleteLater();
     m_tcpServer = nullptr;
 
+    m_clients.clear();
+
     emit logMessage("Сервер остановлен.");
 }
 
-void TcpServer::handleNewConnection()
-{
+void TcpServer::handleNewConnection() {
     while (m_tcpServer->hasPendingConnections()) {
         QTcpSocket* clientSocket = m_tcpServer->nextPendingConnection();
         if (!clientSocket) {
             continue;
         }
 
-        TcpClient* client = new TcpClient(clientSocket, m_tcpServer);
+        TcpClient* client = new TcpClient(clientSocket, this);
+        quintptr descriptor = client->descriptor();
+        client->setId(QString::number(descriptor));
 
-        ClientEntry entry;
-        entry.client = client;
-        entry.allowSending = true;
-        m_clients.append(entry);
+        m_clients.insert(descriptor, client);
 
-        connect(client, &TcpClient::readyRead, this, &TcpServer::handleReadyRead);
+        connect(client, &TcpClient::dataReceived, this, &TcpServer::handleDataReceived);
         connect(client, &TcpClient::disconnected, this, &TcpServer::handleClientDisconnected);
 
-        quintptr descriptor   = client->descriptor();
-        QString ip            = client->peerAddress();
-        quint16 port          = client->peerPort();
-
-        emit clientConnected(descriptor, ip, port);
-        emit logMessage(QString("Новый клиент подключен: %1:%2").arg(ip).arg(port));
-
-        QJsonObject confirmation;
-        confirmation["type"]    = "Confirmation";
-        confirmation["id"]      = QString::number(m_clients.size());
-        client->sendData(confirmation);
+        emit clientConnected(client);
+        emit logMessage(QString("Новый клиент подключен: %1").arg(client->id()));
     }
 }
 
-void TcpServer::handleReadyRead()
-{
+void TcpServer::handleDataReceived(const QByteArray &data) {
     TcpClient* client = qobject_cast<TcpClient*>(sender());
     if (!client) {
-        emit logMessage("Невозможно определить отправителя сигнала.");
+        emit logMessage("Неизвестный отправитель сигнала.");
         return;
     }
 
-    QByteArray data = client->readData();
-    QJsonParseError parseError;
-    QJsonDocument jsonDoc = QJsonDocument::fromJson(data, &parseError);
-
-    if (parseError.error != QJsonParseError::NoError) {
-        emit logMessage(QString("Ошибка парсинга JSON от %1: %2")
-                            .arg(client->descriptor()).arg(parseError.errorString()));
-        return;
-    }
-
-    if (jsonDoc.isObject()) {
-        QJsonObject obj = jsonDoc.object();
-        if (obj.contains("id")) {
-            // Обновляем ID клиента
-            client->id(obj["id"].toString());
-        }
-
-        emit dataReceived(client->descriptor(), obj, client->id());
-        emit logMessage(QString("Получены данные: %1").arg(client->id()));
-    }
+    emit dataReceived(client, data);
+    emit logMessage(QString("Получены данные от клиента %1").arg(client->id()));
 }
 
-void TcpServer::handleClientDisconnected()
-{
+void TcpServer::handleClientDisconnected() {
     TcpClient* client = qobject_cast<TcpClient*>(sender());
-    if (!client) {
+    if (client) {
+        emit clientDisconnected(client);
+        emit logMessage(QString("Клиент отключен: %1").arg(client->id()));
+    } else {
         emit logMessage("Невозможно определить отключившегося клиента.");
+    }
+}
+
+void TcpServer::removeClient(IClient* client) {
+    if (!client) return;
+
+    quintptr descriptor = 0;
+    QString disconnectedId = client->id(); // Получаем ID отключенного клиента
+
+    for (auto it = m_clients.begin(); it != m_clients.end(); ++it) {
+        if (it.value() && it.value()->id() == disconnectedId) {
+            descriptor = it.key();
+            break;
+        }
+    }
+
+    if (m_clients.contains(descriptor)) {
+        m_clients.remove(descriptor);
+        client->deleteLater();
+        emit logMessage(QString("Объект клиента %1 полностью удален.").arg(descriptor));
+    }
+}
+
+void TcpServer::sendToClient(IClient* client, const QByteArray &data) {
+    if (!client || !client->isConnected()) {
+        emit logMessage("Клиент не найден или не подключен.");
         return;
     }
 
-    quintptr descriptor   = client->descriptor();
-    QString ip            = client->peerAddress();
-    quint16 port          = client->peerPort();
-
-    // Ищем и удаляем клиента из списка
-    auto it = std::find_if(m_clients.begin(), m_clients.end(),
-                           [client](const ClientEntry& entry) {
-                               return entry.client == client;
-                           });
-
-    if (it != m_clients.end()) {
-        emit clientDisconnected(descriptor, ip, port);
-        emit logMessage(QString("Клиент отключен: %1:%2 (descriptor: %3)")
-                            .arg(ip).arg(port).arg(descriptor));
-
-        m_clients.erase(it);
-    }
-
-    // Удаляем сам объект
-    client->deleteLater();
-}
-
-QString TcpServer::commandToString(CommandType command) {
-    switch (command) {
-    case CommandType::Start:        return "start";
-    case CommandType::Stop:         return "stop";
-    case CommandType::Configure:    return "configure";
-    default: return "Unknown";
-    }
-}
-
-void TcpServer::sendCommandToAll(CommandType command)
-{
-    if (!m_tcpServer || !m_tcpServer->isListening()) {
-        emit logMessage("Сервер не запущен.");
-        return;
-    }
-
-    QString com = commandToString(command);
-
-    for (const auto& entry : m_clients) {
-        if (!entry.allowSending || !entry.client || !entry.client->isConnected())
-            continue;
-
-        QJsonObject json;
-        json["command"] = com;
-
-        static_cast<TcpClient*>(entry.client)->sendData(json);
-    }
-
-    emit logMessage(QString("Команда '%1' отправлена всем клиентам.").arg(com));
-}
-
-int TcpServer::clientCount() const
-{
-    return m_clients.size();
+    client->sendData(data);
 }

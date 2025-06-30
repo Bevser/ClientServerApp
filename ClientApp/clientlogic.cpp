@@ -1,8 +1,5 @@
 #include "clientlogic.h"
-#include <QCoreApplication>
-#include <QJsonDocument>
-#include <QJsonParseError>
-#include <QDebug>
+
 
 ClientLogic::ClientLogic(const QString& host, quint16 port, QObject *parent)
     : QObject(parent), m_host(host), m_port(port), m_isStarted(false)
@@ -35,9 +32,21 @@ void ClientLogic::connectToServer() {
 }
 
 void ClientLogic::onConnected() {
-    qInfo() << "[OK] Успешно подключено к серверу. Ожидание подтверждения...";
+    qInfo() << "[OK] Успешно подключено к серверу.";
     // Если мы успешно подключились, останавливаем таймер переподключения
     m_reconnectTimer->stop();
+
+    sendData();
+    QJsonObject data;
+    data[Protocol::Keys::ID]    = "Client";
+    data[Protocol::Keys::TYPE]  = Protocol::MessageType::REGISTRATION;
+
+    QJsonObject payload; // Создаем объект для полезной нагрузки
+    payload["bandwidth"]    = QString::number(QRandomGenerator::global()->generateDouble() * 1000, 'f', 2);
+    payload["latency"]      = QString::number(QRandomGenerator::global()->generateDouble() * 100, 'f', 2);
+    payload["packet_loss"]  = QString::number(QRandomGenerator::global()->bounded(0, 5) / 100.0, 'f', 2);
+    data[Protocol::Keys::PAYLOAD] = payload;
+    sendJson(data);
 }
 
 void ClientLogic::onDisconnected() {
@@ -71,22 +80,20 @@ void ClientLogic::onReadyRead() {
     }
 
     if (doc.isObject()) {
-        QJsonObject obj = doc.object();
-        if (obj.contains("type") && obj["type"].toString() == "Confirmation") {
-            m_clientId = "Client-" + obj["id"].toString();
+        QJsonObject json = doc.object();
+        if (json.contains(Protocol::Keys::TYPE) &&
+            json[Protocol::Keys::TYPE].toString() == Protocol::MessageType::CONFIRMATION) {
+            m_clientId = json[Protocol::Keys::ID].toString();
             qInfo() << "[OK] Подключение подтверждено. Мой ID:" << QString(m_clientId);
             qInfo() << "[ИНФО] Ожидание команды 'start' от сервера...";
-            QJsonObject idPacket;
-            idPacket["type"] = "Identification";
-            idPacket["id"] = m_clientId;
-            sendJson(idPacket);
-        } else if (obj.contains("command")) {
-            QString command = obj["command"].toString();
-            if (command == "start" && !m_isStarted) {
+
+        } else if (json.contains(Protocol::Keys::COMMAND)) {
+            QString command = json[Protocol::Keys::COMMAND].toString();
+            if (command == Protocol::Commands::START && !m_isStarted) {
                 qInfo() << "[СТАРТ] Получена команда 'start'. Начинаю отправку данных.";
                 m_isStarted = true;
                 sendData();
-            } else if (command == "stop") {
+            } else if (command == Protocol::Commands::STOP) {
                 qInfo() << "[СТОП] Получена команда 'stop'. Прекращаю отправку данных.";
                 m_isStarted = false;
                 m_dataSendTimer->stop();
@@ -107,9 +114,9 @@ void ClientLogic::sendData() {
     case 1: data = generateDeviceStatus(); break;
     case 2: data = generateLog(); break;
     }
-    data["id"] = m_clientId;
+    data[Protocol::Keys::ID] = m_clientId;
     sendJson(data);
-    int delay = QRandomGenerator::global()->bounded(100, 1001);
+    int delay = QRandomGenerator::global()->bounded(100, 1000);
     m_dataSendTimer->start(delay);
 }
 
@@ -122,33 +129,41 @@ void ClientLogic::sendJson(const QJsonObject& json) {
 
 QJsonObject ClientLogic::generateNetworkMetrics() {
     QJsonObject metrics;
-    metrics["type"] = "NetworkMetrics";
-    metrics["bandwidth"] = QString::number(QRandomGenerator::global()->generateDouble() * 1000, 'f', 2);
-    metrics["latency"] = QString::number(QRandomGenerator::global()->generateDouble() * 100, 'f', 2);
-    metrics["packet_loss"] = QString::number(QRandomGenerator::global()->bounded(0, 5) / 100.0, 'f', 2);
+    metrics[Protocol::Keys::TYPE] = Protocol::MessageType::NETWORK_METRICS;
+    QJsonObject payload; // Создаем объект для полезной нагрузки
+    payload["bandwidth"]    = QString::number(QRandomGenerator::global()->generateDouble() * 1000, 'f', 2);
+    payload["latency"]      = QString::number(QRandomGenerator::global()->generateDouble() * 100, 'f', 2);
+    payload["packet_loss"]  = QString::number(QRandomGenerator::global()->bounded(0, 5) / 100.0, 'f', 2);
+    metrics[Protocol::Keys::PAYLOAD] = payload;
+
     return metrics;
 }
 
 QJsonObject ClientLogic::generateDeviceStatus() {
     QJsonObject status;
-    status["type"] = "DeviceStatus";
-    status["uptime"] = QRandomGenerator::global()->bounded(1, 100000);
-    status["cpu_usage"] = QRandomGenerator::global()->bounded(5, 95);
-    status["memory_usage"] = QRandomGenerator::global()->bounded(10, 98);
+    status[Protocol::Keys::TYPE] = Protocol::MessageType::DEVICE_STATUS;
+    QJsonObject payload; // Создаем объект для полезной нагрузки
+    payload["uptime"]        = QRandomGenerator::global()->bounded(1, 100000);
+    payload["cpu_usage"]     = QRandomGenerator::global()->bounded(5, 95);
+    payload["memory_usage"]  = QRandomGenerator::global()->bounded(10, 98);
+    payload["cpu_temp"]      = QRandomGenerator::global()->bounded(10, 90);
+    status[Protocol::Keys::PAYLOAD] = payload;
     return status;
 }
 
 QJsonObject ClientLogic::generateLog() {
     QJsonObject log;
-    log["type"] = "Log";
+    log[Protocol::Keys::TYPE] = Protocol::MessageType::LOG;
     QStringList messages = {
-        "Interface eth0 link is down", "User 'admin' logged in from 192.168.1.100",
-        "High CPU temperature detected: 85C",
-        "Configuration updated successfully. Service 'firewall' was reloaded.",
-        "CRITICAL: Failed to connect to database 'prod_db' after 3 retries. Check connection."
+        "High CPU temperature detected",
+        "Configuration updated successfully",
+        "Failed to connect to database."
     };
     QStringList severities = {"INFO", "WARN", "ERROR", "CRITICAL"};
-    log["message"] = messages.at(QRandomGenerator::global()->bounded(messages.size()));
-    log["severity"] = severities.at(QRandomGenerator::global()->bounded(severities.size()));
+    QJsonObject payload; // Создаем объект для полезной нагрузки
+    payload["message"] = messages.at(QRandomGenerator::global()->bounded(messages.size()));
+    payload["severity"] = severities.at(QRandomGenerator::global()->bounded(severities.size()));
+    log[Protocol::Keys::PAYLOAD] = payload;
+
     return log;
 }

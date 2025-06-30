@@ -10,48 +10,34 @@
 #include <QMap>
 
 #include "tcpclient.h"
+#include "iserver.h"
 
 
-class TcpServer : public QObject {
+class TcpServer : public IServer {
     Q_OBJECT
 
-    struct ClientEntry {
-        IClient* client;
-        bool allowSending = true;
-    };
-
 public:
-    enum class CommandType {
-        Start,
-        Stop,
-        Configure,
-    };
-
     explicit TcpServer(QObject *parent = nullptr);
     ~TcpServer();
 
-    int clientCount() const;
-    QString commandToString(CommandType command);
-
-signals:
-    void clientConnected(quintptr descriptor, QString ip, quint16 port);
-    void clientDisconnected(quintptr descriptor, QString ip, quint16 port);
-    void dataReceived(quintptr descriptor, const QJsonObject& data, const QString& clientId);
-    void logMessage(const QString& message);
+    int clientCount() const override;
 
 public slots:
-    void startServer(quint16 port = 8080);
-    void stopServer();
-    void sendCommandToAll(CommandType command);
+    void startServer(quint16 port) override;
+    void stopServer() override;
+
+    void sendToClient(IClient* client, const QByteArray &data) override;
+    void removeClient(IClient* client) override;
 
 private slots:
-    void handleNewConnection();
-    void handleReadyRead();
-    void handleClientDisconnected();
+    void handleNewConnection() override;
+    void handleClientDisconnected() override;
+
+    void handleDataReceived(const QByteArray &data) override;
 
 private:
     QTcpServer* m_tcpServer;
-    QList<ClientEntry> m_clients;
+    QHash<quintptr, TcpClient*> m_clients;
 };
 
 #endif // TCPSERVER_H

@@ -9,7 +9,31 @@ ApplicationWindow {
     visible: true
     title: "Сервер управления"
     color: "#f0f0f0"
-    property bool sortingEnabled: false
+
+    // Диалог конфигурации
+    ConfigurationDialog {
+        id: configDialog
+        anchors.centerIn: parent
+
+        onConfigurationAccepted: function(message) {
+            viewModel.updateClientConfiguration(message)
+        }
+
+        onSendingToggled: function(data) {
+            viewModel.toggleClientSending(data)
+        }
+    }
+
+    // Отладочная информация
+    Component.onCompleted: {
+        console.log("Main window loaded")
+        console.log("viewModel:", viewModel)
+        if (viewModel && viewModel.clientTableModel) {
+            console.log("clientTableModel:", viewModel.clientTableModel)
+            console.log("clientTableModel.columnHeaders:", viewModel.clientTableModel.columnHeaders)
+            console.log("clientTableModel.columnWidths:", viewModel.clientTableModel.columnWidths)
+        }
+    }
 
     ColumnLayout {
         anchors.fill: parent
@@ -20,23 +44,27 @@ ApplicationWindow {
         RowLayout {
             Layout.fillWidth: true
             spacing: 10
+
             Button {
                 text: "Запустить сервер"
-                onClicked: viewModel.startServer()
+                onClicked: viewModel.startServer(12345)
                 highlighted: true
             }
+
             Button {
                 text: "Остановить сервер"
                 onClicked: viewModel.stopServer()
             }
-            Item { Layout.fillWidth: true }
+
+            Rectangle {
+                width: 2
+                height: parent.height * 0.6
+                color: "#ccc"
+            }
+
             Button {
                 text: "Старт всем клиентам"
-                onClicked:
-                {
-                    root.sortingEnabled = false
-                    viewModel.startAllClients()
-                }
+                onClicked: viewModel.startAllClients()
                 background: Rectangle {
                     color: "#4CAF50"
                     radius: 3
@@ -49,13 +77,10 @@ ApplicationWindow {
                     verticalAlignment: Text.AlignVCenter
                 }
             }
+
             Button {
                 text: "Стоп всем клиентам"
-                onClicked:
-                {
-                    root.sortingEnabled = true
-                    viewModel.stopAllClients()
-                }
+                onClicked: viewModel.stopAllClients()
                 background: Rectangle {
                     color: "#f44336"
                     radius: 3
@@ -68,6 +93,59 @@ ApplicationWindow {
                     verticalAlignment: Text.AlignVCenter
                 }
             }
+
+            Item { Layout.fillWidth: true }
+
+            Button {
+                text: "Удалить отключенных"
+                onClicked: viewModel.removeDisconnectedClients()
+                background: Rectangle {
+                    color: "#ff9800"
+                    radius: 3
+                    border.color: "#f57c00"
+                }
+                contentItem: Text {
+                    text: parent.text
+                    color: "white"
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+            }
+
+            // Отладочная кнопка
+            Button {
+                text: "Debug"
+                onClicked: {
+                    console.log("=== DEBUG INFO ===")
+                    console.log("viewModel:", viewModel)
+                    if (viewModel) {
+                        console.log("clientTableModel:", viewModel.clientTableModel)
+                        if (viewModel.clientTableModel) {
+                            console.log("columnHeaders:", viewModel.clientTableModel.columnHeaders)
+                            console.log("columnWidths:", viewModel.clientTableModel.columnWidths)
+                            console.log("rowCount:", viewModel.clientTableModel.rowCount())
+                        }
+                        console.log("dataTableModel:", viewModel.dataTableModel)
+                        if (viewModel.dataTableModel) {
+                            console.log("data columnHeaders:", viewModel.dataTableModel.columnHeaders)
+                            console.log("data columnWidths:", viewModel.dataTableModel.columnWidths)
+                            console.log("data rowCount:", viewModel.dataTableModel.rowCount())
+                        }
+                    }
+                }
+                background: Rectangle {
+                    color: "#9C27B0"
+                    radius: 3
+                    border.color: "#7B1FA2"
+                }
+                contentItem: Text {
+                    text: parent.text
+                    color: "white"
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    font.pixelSize: 10
+                }
+            }
         }
 
         // Основная область (клиенты + данные)
@@ -78,39 +156,58 @@ ApplicationWindow {
 
             // Левая панель — клиенты
             Frame {
-                SplitView.preferredWidth: 450
+                SplitView.preferredWidth: 470
+                SplitView.minimumWidth: 280
 
                 UniversalTable {
+                    id: clientTable
                     anchors.fill: parent
-                    title: "Подключенные клиенты"
+                    title: "Клиенты"
+                    tableModel: viewModel ? viewModel.clientTableModel : null
 
-                    selectedRowColor: "#e8f5e8"
-                    hoverRowColor: "#f0f8f0"
-                    sortingEnabled: root.sortingEnabled
+                    // Используем данные из модели
+                    columnWidths: viewModel && viewModel.clientTableModel ? viewModel.clientTableModel.columnWidths : []
+                    columnHeaders: viewModel && viewModel.clientTableModel ? viewModel.clientTableModel.columnHeaders : []
 
-
-                    columnHeaders: [
-                        {text: "ID Клиента", width: 0.33},
-                        {text: "IP Адрес", width: 0.33},
-                        {text: "Статус", width: 0.34}
-                    ]
-
-                    tableModel: viewModel.clientTableModel
-
-                    onSort: function(columnIndex) {
-                        viewModel.sortClients(columnIndex)
+                    Component.onCompleted: {
+                        console.log("Client table completed")
+                        console.log("tableModel:", tableModel)
+                        console.log("columnHeaders:", columnHeaders)
+                        console.log("columnWidths:", columnWidths)
                     }
 
-                    onCellClicked: function(row, column, value) {
-                        console.log("Клик по клиенту:", row, value)
+                    onCellDoubleClicked: function(row, model) {
+                        console.log("Cell double clicked, row:", row)
+                        let rowData = viewModel.clientTableModel.getRowData(row)
+                        console.log("Row data:", JSON.stringify(rowData))
+                        if (rowData) {
+                            configDialog.openWithData(rowData)
+                        }
                     }
 
-                    // Кастомная стилизация для колонки статуса
+                    onHeaderClicked: function(column) {
+                        console.log("Header clicked, column:", column)
+                        viewModel.sortClients(column)
+                    }
+
+                    // Кастомная функция для стилизации ячеек статуса
                     cellStyler: function(row, column, value) {
-                        if (column === 2) { // Колонка статуса
-                            return {
-                                color: value === "Подключен" ? "#2e7d32" : "#c62828",
-                                bold: value === "Подключен"
+                        // Колонка статуса (индекс 2)
+                        if (column === 2) {
+                            if (value === "Зарегистрирован") {
+                                return {color: "#4CAF50", bold: true}
+                            } else if (value === "Подключен") {
+                                return {color: "#FF9800", bold: true}
+                            } else if (value === "Отключен") {
+                                return {color: "#f44336", bold: true}
+                            }
+                        }
+                        // Колонка отправки (индекс 3)
+                        if (column === 3) {
+                            if (value === "Да") {
+                                return {color: "#4CAF50", bold: true}
+                            } else {
+                                return {color: "#f44336", bold: true}
                             }
                         }
                         return {color: "#424242", bold: false}
@@ -118,77 +215,122 @@ ApplicationWindow {
                 }
             }
 
-            // Правая панель — данные
-            Frame {
+            // Правая панель — данные и лог
+            SplitView {
                 SplitView.fillWidth: true
+                orientation: Qt.Vertical
+                SplitView.preferredWidth: 800
+                SplitView.minimumWidth: 400
 
-                UniversalTable {
-                    anchors.fill: parent
-                    title: "Полученные данные"
+                // Верхняя часть — таблица данных
+                Frame {
+                    SplitView.fillHeight: true
+                    SplitView.preferredHeight: 600
+                    SplitView.minimumHeight: 200
 
-                    selectedRowColor: "#fff3e0"
-                    hoverRowColor: "#fffbf0"
-                    sortingEnabled: root.sortingEnabled
+                    UniversalTable {
+                        id: dataTable
+                        anchors.fill: parent
+                        title: "Данные"
+                        tableModel: viewModel ? viewModel.dataTableModel : null
 
-                    columnHeaders: [
-                        {text: "Время", width: 0.2},
-                        {text: "ID Клиента", width: 0.2},
-                        {text: "Тип", width: 0.2},
-                        {text: "Содержимое", width: 0.4}
-                    ]
+                        // Используем данные из модели
+                        columnWidths: viewModel && viewModel.dataTableModel ? viewModel.dataTableModel.columnWidths : []
+                        columnHeaders: viewModel && viewModel.dataTableModel ? viewModel.dataTableModel.columnHeaders : []
 
-                    tableModel: viewModel.dataTableModel
-                    fontFamily: "monospace"
-                    fontSize: 11
+                        Component.onCompleted: {
+                            console.log("Data table completed")
+                            console.log("tableModel:", tableModel)
+                            console.log("columnHeaders:", columnHeaders)
+                            console.log("columnWidths:", columnWidths)
+                        }
 
-                    onSort: function(columnIndex) {
-                        viewModel.sortData(columnIndex)
-                    }
+                        onHeaderClicked: function(column) {
+                            console.log("Data header clicked, column:", column)
+                            viewModel.sortData(column)
+                        }
 
-                    onCellClicked: function(row, column, value) {
-                        console.log("Данные:", row, column, value)
-                    }
-
-                    // Простая стилизация для таблицы данных
-                    cellStyler: function(row, column, value) {
-                        return {color: "#424242", bold: false}
+                        // Кастомная функция для стилизации ячеек типа сообщения
+                        cellStyler: function(row, column, value) {
+                            // Колонка типа (индекс 2)
+                            if (column === 2) {
+                                if (value === "Registration") {
+                                    return {color: "#2196F3", bold: true}
+                                } else if (value === "Data") {
+                                    return {color: "#4CAF50", bold: false}
+                                } else if (value === "Command") {
+                                    return {color: "#FF9800", bold: true}
+                                } else if (value === "Configuration") {
+                                    return {color: "#9C27B0", bold: true}
+                                }
+                            }
+                            return {color: "#424242", bold: false}
+                        }
                     }
                 }
-            }
-        }
 
-        // Лог событий
-        Frame {
-            Layout.fillWidth: true
-            Layout.minimumHeight: 150
-            Layout.preferredHeight: root.height * 0.25
-            background: Rectangle {
-                color: "#212121"
-                border.color: "gray"
-            }
+                // Нижняя часть — лог
+                Frame {
+                    SplitView.preferredHeight: 200
+                    SplitView.minimumHeight: 100
 
-            ColumnLayout {
-                anchors.fill: parent
-                spacing: 5
+                    ColumnLayout {
+                        anchors.fill: parent
+                        spacing: 5
 
-                Label {
-                    text: "Лог событий"
-                    font.bold: true
-                    Layout.alignment: Qt.AlignLeft
-                    leftPadding: 5
-                    color: "#E0E0E0"
-                }
+                        RowLayout {
+                            Layout.fillWidth: true
 
-                ScrollView {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
+                            Label {
+                                text: "Лог"
+                                font.bold: true
+                                font.pixelSize: 14
+                            }
 
-                    TextArea {
-                        readOnly: true
-                        text: viewModel.logText
-                        color: "#E0E0E0"
-                        font.family: "monospace"
-                        background: null
+                            Item { Layout.fillWidth: true }
+
+                            Button {
+                                text: "Очистить"
+                                onClicked: viewModel.clearLog()
+                                background: Rectangle {
+                                    color: "#607D8B"
+                                    radius: 3
+                                    border.color: "#455A64"
+                                }
+                                contentItem: Text {
+                                    text: parent.text
+                                    color: "white"
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                    font.pixelSize: 10
+                                }
+                            }
+                        }
+
+                        ScrollView {
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+
+                            TextArea {
+                                id: logArea
+                                text: viewModel ? viewModel.logText : ""
+                                readOnly: true
+                                wrapMode: TextArea.Wrap
+                                font.family: "Consolas, Monaco, monospace"
+                                font.pixelSize: 10
+                                color: "#333"
+                                selectByMouse: true
+                                background: Rectangle {
+                                    color: "#fafafa"
+                                    border.color: "#ddd"
+                                }
+
+                                // Автоскролл к началу при обновлении
+                                onTextChanged: {
+                                    logArea.cursorPosition = 0
+                                }
+                            }
+                        }
                     }
                 }
             }

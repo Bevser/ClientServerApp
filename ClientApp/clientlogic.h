@@ -6,6 +6,13 @@
 #include <QTimer>
 #include <QRandomGenerator>
 #include <QJsonObject>
+#include <QCoreApplication>
+#include <QJsonDocument>
+#include <QJsonParseError>
+#include <QDebug>
+
+#include "../ServerApp/protocol.h"
+
 
 class ClientLogic : public QObject
 {

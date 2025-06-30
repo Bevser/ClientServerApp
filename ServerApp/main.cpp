@@ -4,6 +4,7 @@
 #include <QQuickWindow>
 #include <QQuickStyle>
 #include "serverviewmodel.h"
+#include "serverfactory.h"
 
 int main(int argc, char *argv[])
 {
@@ -13,18 +14,21 @@ int main(int argc, char *argv[])
 
     QQmlApplicationEngine engine;
 
-    ServerViewModel serverViewModel;
+    qmlRegisterSingletonType<AppEnums>("enums", 1, 0, "AppEnums", [](QQmlEngine*, QJSEngine*) -> QObject* {
+        return new AppEnums();
+    });
+
+    IServer* tcpServer = ServerFactory::createServer(ServerType::TCP);
+
+    ServerViewModel serverViewModel(tcpServer);
+
     engine.rootContext()->setContextProperty("viewModel", &serverViewModel);
 
     QQuickStyle::setStyle("Universal");
-
-    QObject::connect(
-        &engine,
-        &QQmlApplicationEngine::objectCreationFailed,
-        &app,
-        []() { QCoreApplication::exit(-1); },
-        Qt::QueuedConnection);
     engine.loadFromModule("ServerApp", "Main");
+
+    if (engine.rootObjects().isEmpty())
+        return -1;
 
     return app.exec();
 }

@@ -2,142 +2,131 @@
 #define SERVERVIEWMODEL_H
 
 #include <QObject>
-#include <QList>
-#include <QJsonObject>
-#include <QThread>
 #include <QAbstractTableModel>
-#include <QSortFilterProxyModel>
-#include "tcpserver.h"
+#include <QVariant>
+#include <QVariantMap>
+#include <QVariantList>
+#include <algorithm>
 
-// Модель для таблицы клиентов
-class ClientTableModel : public QAbstractTableModel {
+#include "serverworker.h"
+#include "iserver.h"
+#include "sharedkeys.h"
+#include "appenums.h"
+
+// ================= TableModel Class =================
+
+class TableModel : public QAbstractTableModel
+{
     Q_OBJECT
+
 public:
-    enum Roles {
-        DisplayRole = Qt::DisplayRole,
-        ClientIdRole = Qt::UserRole + 1,
-        DescriptorRole,
-        IpAddressRole,
-        StatusRole
-    };
+    explicit TableModel(const QStringList& keys, const QStringList& headers, QObject *parent = nullptr);
 
-    explicit ClientTableModel(QObject* parent = nullptr);
-
-    // QAbstractTableModel interface
-    int rowCount(const QModelIndex& parent = QModelIndex()) const override;
-    int columnCount(const QModelIndex& parent = QModelIndex()) const override;
-    QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
+    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
+    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
     QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
-    QHash<int, QByteArray> roleNames() const override;
 
     // Методы для управления данными
-    void addClient(quintptr descriptor, const QString& ip, quint16 port);
-    void updateClientId(quintptr descriptor, const QString& clientId);
-    void updateClientStatus(quintptr descriptor, const QString& status);
-    void removeClient(quintptr descriptor);
+    void setData(const QList<QVariantMap>& data);
+    void addRow(const QVariantMap& rowData);
+    void updateRow(int row, const QVariantMap& rowData);
+    void removeRow(int row);
     void clear();
-    void sort(int column, Qt::SortOrder order = Qt::AscendingOrder) override;
+    void sortByColumn(int column, Qt::SortOrder order);
+
+    // Метод для получения данных строки (для QML)
+    Q_INVOKABLE QVariantMap getRowData(int row) const;
+
+    // Свойства для получения информации о колонках в QML
+    Q_PROPERTY(QStringList columnHeaders READ columnHeaders CONSTANT)
+    Q_PROPERTY(QList<qreal> columnWidths READ columnWidths CONSTANT)
+
+    QStringList columnHeaders() const { return m_headers; }
+    QList<qreal> columnWidths() const { return m_columnWidths; }
+
+    // Метод для установки ширины колонок
+    void setColumnWidths(const QList<qreal>& widths) { m_columnWidths = widths; }
 
 private:
-    struct ClientData {
-        QString clientId = "Ожидание ID...";
-        quintptr descriptor = 0;
-        QString ipAddress;
-        QString status = "Подключен";
-    };
-
-    QList<ClientData> m_clients;
-    int m_sortColumn = -1;
-    Qt::SortOrder m_sortOrder = Qt::AscendingOrder;
+    QStringList m_keys;             // Ключи колонок
+    QStringList m_headers;          // Заголовки колонок для отображения
+    QList<QVariantMap> m_data;      // Данные таблицы
+    QList<qreal> m_columnWidths;    // Ширина колонок (в процентах)
 };
 
-// Модель для таблицы данных
-class DataTableModel : public QAbstractTableModel {
-    Q_OBJECT
-public:
-    enum Roles {
-        DisplayRole = Qt::DisplayRole,
-        TimestampRole = Qt::UserRole + 1,
-        ClientIdRole,
-        DataTypeRole,
-        ContentRole
-    };
+// ================= ServerViewModel Class =================
 
-    explicit DataTableModel(QObject* parent = nullptr);
-
-    // QAbstractTableModel interface
-    int rowCount(const QModelIndex& parent = QModelIndex()) const override;
-    int columnCount(const QModelIndex& parent = QModelIndex()) const override;
-    QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
-    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
-    QHash<int, QByteArray> roleNames() const override;
-
-    // Методы для управления данными
-    void addData(const QString& timestamp, const QString& clientId, const QString& dataType, const QString& content);
-    void clear();
-    void sort(int column, Qt::SortOrder order = Qt::AscendingOrder) override;
-
-private:
-    struct DataEntry {
-        QString timestamp;
-        QString clientId;
-        QString dataType;
-        QString content;
-    };
-
-    QList<DataEntry> m_data;
-    int m_sortColumn = -1;
-    Qt::SortOrder m_sortOrder = Qt::AscendingOrder;
-    static const int MAX_ENTRIES = 500;
-};
-
-// Основной класс ViewModel
 class ServerViewModel : public QObject
 {
     Q_OBJECT
-    Q_PROPERTY(ClientTableModel* clientTableModel READ clientTableModel CONSTANT)
-    Q_PROPERTY(DataTableModel* dataTableModel READ dataTableModel CONSTANT)
+    Q_PROPERTY(TableModel* clientTableModel READ clientTableModel CONSTANT)
+    Q_PROPERTY(TableModel* dataTableModel READ dataTableModel CONSTANT)
     Q_PROPERTY(QString logText READ logText NOTIFY logTextChanged)
 
+
+    static constexpr int WORKER_THREAD_WAIT_TIMEOUT_MS  = 5000;     // Таймаут ожидания завершения потока
+    static constexpr int MAX_DATA_TABLE_ROWS            = 200;      // Максимальное количество строк в таблице данных
+    static constexpr int MAX_LOG_TEXT_LENGTH            = 10000;    // Максимальная длина текста лога и длина после обрезки
+    static constexpr int LOG_TRIM_LENGTH                = 8000;     // Чтобы не обрезать до нуля, оставляем небольшой буфер
+
 public:
-    explicit ServerViewModel(QObject *parent = nullptr);
+    explicit ServerViewModel(IServer* server, QObject *parent = nullptr);
     ~ServerViewModel();
 
-    ClientTableModel* clientTableModel() const { return m_clientTableModel; }
-    DataTableModel* dataTableModel() const { return m_dataTableModel; }
+    // Геттеры для QML
+    TableModel* clientTableModel() const;
+    TableModel* dataTableModel() const;
     QString logText() const;
 
     // Методы, вызываемые из QML
-    Q_INVOKABLE void startServer();
+    Q_INVOKABLE void startServer(quint16 port);
     Q_INVOKABLE void stopServer();
     Q_INVOKABLE void startAllClients();
     Q_INVOKABLE void stopAllClients();
-    Q_INVOKABLE void sortClients(int column);
-    Q_INVOKABLE void sortData(int column);
+    Q_INVOKABLE void removeDisconnectedClients();
+    Q_INVOKABLE void updateClientConfiguration(const QVariantMap& config);
+    Q_INVOKABLE void sortClients(int columnIndex);
+    Q_INVOKABLE void sortData(int columnIndex);
+    Q_INVOKABLE void clearLog();
+
+public slots:
+    // Слоты для обработки сигналов от рабочего потока
+    void handleClientUpdate(const QVariantMap& clientData);
+    void handleDataReceived(const QVariantMap& data);
+    void handleLogMessage(const QString& message);
+    void handleServerStarted();
+    void handleServerStopped();
 
 signals:
     void logTextChanged();
 
-private slots:
-    // Слоты для получения сигналов от ServerLogic
-    void onClientConnected(quintptr descriptor, const QString& ip, quint16 port);
-    void onClientDisconnected(quintptr descriptor);
-    void onDataReceived(quintptr descriptor, const QJsonObject& data, const QString& clientId);
-    void onLogMessage(const QString& message);
+    // Сигналы для отправки команд в рабочий поток
+    void startServerRequested(quint16 port);
+    void stopServerRequested();
+    void sendToAllRequested(const QVariantMap &data);
+    void updateClientConfigRequested(const QVariantMap &config);
+    void removeDisconnectedRequested();
+    void clearClientsRequested();
 
 private:
-    TcpServer* m_serverLogic;
-    QThread* m_serverThread;
+    void setupWorkerThread();
+    void updateClientInModel(const QVariantMap& clientData);
+    void removeClientFromModel(const QString& descriptor);
 
-    ClientTableModel* m_clientTableModel;
-    DataTableModel* m_dataTableModel;
+    // UI модели (остаются в главном потоке)
+    TableModel* m_clientTableModel;
+    TableModel* m_dataTableModel;
     QString m_logText;
 
-    // Для отслеживания порядка сортировки
-    int m_clientSortColumn = -1;
-    Qt::SortOrder m_clientSortOrder = Qt::AscendingOrder;
-    int m_dataSortColumn = -1;
-    Qt::SortOrder m_dataSortOrder = Qt::AscendingOrder;
+    // Рабочий поток
+    QThread* m_workerThread;
+    ServerWorker* m_serverWorker;
+
+    // Переменные для хранения порядка сортировки
+    Qt::SortOrder m_clientSortOrder;
+    Qt::SortOrder m_dataSortOrder;
 };
+
 
 #endif // SERVERVIEWMODEL_H

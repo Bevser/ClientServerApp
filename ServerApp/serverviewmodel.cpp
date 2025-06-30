@@ -1,364 +1,388 @@
 #include "serverviewmodel.h"
-#include <QDateTime>
-#include <QJsonValue>
-#include <algorithm>
+#include <QTime>
+#include <QDebug>
 
-// ClientTableModel Implementation
-ClientTableModel::ClientTableModel(QObject* parent) : QAbstractTableModel(parent) {}
+// ================= TableModel =================
 
-int ClientTableModel::rowCount(const QModelIndex& parent) const {
-    Q_UNUSED(parent)
-    return m_clients.size();
-}
-
-int ClientTableModel::columnCount(const QModelIndex& parent) const {
-    Q_UNUSED(parent)
-    return 3; // ID, IP, Status
-}
-
-QVariant ClientTableModel::data(const QModelIndex& index, int role) const {
-    if (!index.isValid() || index.row() >= m_clients.size() || index.column() >= 3)
-        return QVariant();
-
-    const ClientData& client = m_clients.at(index.row());
-
-    // Главная роль для отображения - всегда возвращаем строку
-    if (role == Qt::DisplayRole || role == DisplayRole) {
-        switch (index.column()) {
-        case 0: return client.clientId;
-        case 1: return client.ipAddress;
-        case 2: return client.status;
-        default: return QVariant();
-        }
-    }
-
-    // Дополнительные роли для QML
-    switch (role) {
-    case ClientIdRole: return client.clientId;
-    case DescriptorRole: return static_cast<qulonglong>(client.descriptor);
-    case IpAddressRole: return client.ipAddress;
-    case StatusRole: return client.status;
-    default: return QVariant();
+TableModel::TableModel(const QStringList& keys, const QStringList& headers, QObject *parent)
+    : QAbstractTableModel(parent), m_keys(keys), m_headers(headers)
+{
+    // Устанавливаем ширину колонок по умолчанию (равномерно)
+    qreal defaultWidth = 1.0 / keys.size();
+    for (int i = 0; i < keys.size(); ++i) {
+        m_columnWidths.append(defaultWidth);
     }
 }
 
-QVariant ClientTableModel::headerData(int section, Qt::Orientation orientation, int role) const {
-    if (orientation == Qt::Horizontal && role == Qt::DisplayRole) {
-        switch (section) {
-        case 0: return "ID Клиента";
-        case 1: return "IP Адрес";
-        case 2: return "Статус";
-        default: return QVariant();
-        }
-    }
-    return QVariant();
-}
-
-QHash<int, QByteArray> ClientTableModel::roleNames() const {
-    QHash<int, QByteArray> roles;
-    roles[Qt::DisplayRole] = "display";
-    roles[ClientIdRole] = "clientId";
-    roles[DescriptorRole] = "descriptor";
-    roles[IpAddressRole] = "ipAddress";
-    roles[StatusRole] = "status";
-    return roles;
-}
-
-void ClientTableModel::addClient(quintptr descriptor, const QString& ip, quint16 port) {
-    beginInsertRows(QModelIndex(), m_clients.size(), m_clients.size());
-    ClientData client;
-    client.descriptor = descriptor;
-    client.ipAddress = QString("%1:%2").arg(ip).arg(port);
-    client.status = "Подключен";
-    client.clientId = "Ожидание ID...";
-    m_clients.append(client);
-    endInsertRows();
-}
-
-void ClientTableModel::updateClientId(quintptr descriptor, const QString& clientId) {
-    for (int i = 0; i < m_clients.size(); ++i) {
-        if (m_clients[i].descriptor == descriptor) {
-            if (m_clients[i].clientId != clientId) {
-                m_clients[i].clientId = clientId;
-                QModelIndex topLeft = createIndex(i, 0);
-                QModelIndex bottomRight = createIndex(i, 0);
-                emit dataChanged(topLeft, bottomRight, {Qt::DisplayRole});
-            }
-            break;
-        }
-    }
-}
-
-void ClientTableModel::updateClientStatus(quintptr descriptor, const QString& status) {
-    for (int i = 0; i < m_clients.size(); ++i) {
-        if (m_clients[i].descriptor == descriptor) {
-            if (m_clients[i].status != status) {
-                m_clients[i].status = status;
-                QModelIndex topLeft = createIndex(i, 2);
-                QModelIndex bottomRight = createIndex(i, 2);
-                emit dataChanged(topLeft, bottomRight, {Qt::DisplayRole});
-            }
-            break;
-        }
-    }
-}
-
-void ClientTableModel::removeClient(quintptr descriptor) {
-    for (int i = 0; i < m_clients.size(); ++i) {
-        if (m_clients[i].descriptor == descriptor) {
-            beginRemoveRows(QModelIndex(), i, i);
-            m_clients.removeAt(i);
-            endRemoveRows();
-            break;
-        }
-    }
-}
-
-void ClientTableModel::clear() {
-    if (!m_clients.isEmpty()) {
-        beginResetModel();
-        m_clients.clear();
-        endResetModel();
-    }
-}
-
-void ClientTableModel::sort(int column, Qt::SortOrder order) {
-    if (column < 0 || column >= columnCount() || m_clients.isEmpty())
-        return;
-
-    m_sortColumn = column;
-    m_sortOrder = order;
-
-    beginResetModel();
-    std::sort(m_clients.begin(), m_clients.end(), [column, order](const ClientData& a, const ClientData& b) {
-        QString valueA, valueB;
-        switch (column) {
-        case 0: valueA = a.clientId; valueB = b.clientId; break;
-        case 1: valueA = a.ipAddress; valueB = b.ipAddress; break;
-        case 2: valueA = a.status; valueB = b.status; break;
-        default: return false;
-        }
-        return order == Qt::AscendingOrder ? valueA < valueB : valueA > valueB;
-    });
-    endResetModel();
-}
-
-// DataTableModel Implementation
-DataTableModel::DataTableModel(QObject* parent) : QAbstractTableModel(parent) {}
-
-int DataTableModel::rowCount(const QModelIndex& parent) const {
+int TableModel::rowCount(const QModelIndex &parent) const
+{
     Q_UNUSED(parent)
     return m_data.size();
 }
 
-int DataTableModel::columnCount(const QModelIndex& parent) const {
+int TableModel::columnCount(const QModelIndex &parent) const
+{
     Q_UNUSED(parent)
-    return 4; // Timestamp, ClientId, DataType, Content
+    return m_keys.size();
 }
 
-QVariant DataTableModel::data(const QModelIndex& index, int role) const {
-    if (!index.isValid() || index.row() >= m_data.size() || index.column() >= 4)
+QVariant TableModel::data(const QModelIndex &index, int role) const
+{
+    if (!index.isValid() || index.row() >= m_data.size() || index.column() >= m_keys.size())
         return QVariant();
 
-    const DataEntry& entry = m_data.at(index.row());
-
-    // Главная роль для отображения - всегда возвращаем строку
     if (role == Qt::DisplayRole) {
-        switch (index.column()) {
-        case 0: return entry.timestamp;
-        case 1: return entry.clientId;
-        case 2: return entry.dataType;
-        case 3: return entry.content;
-        default: return QVariant();
+        const QVariantMap& rowData = m_data.at(index.row());
+        const QString& key = m_keys.at(index.column());
+
+        QVariant value = rowData[key];
+
+        // Специальная обработка для различных типов данных
+        if (key == Keys::STATUS) {
+            int status = value.toInt();
+            return AppEnums::statusToString((AppEnums::ClientStatus)status);
         }
+
+        if (key == Keys::ALLOW_SENDING) {
+            return value.toBool() ? "Да" : "Нет";
+        }
+
+        // Если это payload в данных, преобразуем QVariantMap в строку
+        if (key == Keys::PAYLOAD && value.typeId() == QMetaType::QVariantMap) {
+            QVariantMap payloadMap = value.toMap();
+            QStringList items;
+            for (auto it = payloadMap.begin(); it != payloadMap.end(); ++it) {
+                items << QString("%1: %2").arg(it.key()).arg(it.value().toString());
+            }
+            return items.join(", ");
+        }
+
+        return value.toString();
     }
 
-    // Дополнительные роли для QML
-    switch (role) {
-    case TimestampRole: return entry.timestamp;
-    case ClientIdRole: return entry.clientId;
-    case DataTypeRole: return entry.dataType;
-    case ContentRole: return entry.content;
-    default: return QVariant();
-    }
+    return QVariant();
 }
 
-QVariant DataTableModel::headerData(int section, Qt::Orientation orientation, int role) const {
+QVariant TableModel::headerData(int section, Qt::Orientation orientation, int role) const
+{
     if (orientation == Qt::Horizontal && role == Qt::DisplayRole) {
-        switch (section) {
-        case 0: return "Время";
-        case 1: return "ID Клиента";
-        case 2: return "Тип";
-        case 3: return "Содержимое";
-        default: return QVariant();
+        if (section < m_headers.size()) {
+            return m_headers.at(section);
         }
     }
     return QVariant();
 }
 
-QHash<int, QByteArray> DataTableModel::roleNames() const {
-    QHash<int, QByteArray> roles;
-    roles[Qt::DisplayRole] = "display";
-    roles[TimestampRole] = "timestamp";
-    roles[ClientIdRole] = "clientId";
-    roles[DataTypeRole] = "dataType";
-    roles[ContentRole] = "content";
-    return roles;
+void TableModel::setData(const QList<QVariantMap>& data)
+{
+    beginResetModel();
+    m_data = data;
+    endResetModel();
 }
 
-void DataTableModel::addData(const QString& timestamp, const QString& clientId, const QString& dataType, const QString& content) {
-    // Удаляем старые записи если превышен лимит
-    while (m_data.size() >= MAX_ENTRIES) {
-        beginRemoveRows(QModelIndex(), m_data.size() - 1, m_data.size() - 1);
-        m_data.removeLast();
-        endRemoveRows();
-    }
-
-    beginInsertRows(QModelIndex(), 0, 0);
-    DataEntry entry;
-    entry.timestamp = timestamp;
-    entry.clientId = clientId;
-    entry.dataType = dataType;
-    entry.content = content;
-    m_data.prepend(entry); // Добавляем в начало для показа последних данных сверху
+void TableModel::addRow(const QVariantMap& rowData)
+{
+    beginInsertRows(QModelIndex(), 0, 0); // Добавляем в начало
+    m_data.prepend(rowData);
     endInsertRows();
 }
 
-void DataTableModel::clear() {
-    if (!m_data.isEmpty()) {
-        beginResetModel();
-        m_data.clear();
-        endResetModel();
+void TableModel::updateRow(int row, const QVariantMap& rowData)
+{
+    if (row >= 0 && row < m_data.size()) {
+        m_data[row] = rowData;
+        emit dataChanged(index(row, 0), index(row, m_keys.size() - 1));
     }
 }
 
-void DataTableModel::sort(int column, Qt::SortOrder order) {
-    if (column < 0 || column >= columnCount() || m_data.isEmpty())
-        return;
+void TableModel::removeRow(int row)
+{
+    if (row >= 0 && row < m_data.size()) {
+        beginRemoveRows(QModelIndex(), row, row);
+        m_data.removeAt(row);
+        endRemoveRows();
+    }
+}
 
-    m_sortColumn = column;
-    m_sortOrder = order;
+void TableModel::clear()
+{
+    beginResetModel();
+    m_data.clear();
+    endResetModel();
+}
+
+void TableModel::sortByColumn(int column, Qt::SortOrder order)
+{
+    if (column < 0 || column >= m_keys.size()) return;
+
+    const QString& key = m_keys.at(column);
 
     beginResetModel();
-    std::sort(m_data.begin(), m_data.end(), [column, order](const DataEntry& a, const DataEntry& b) {
-        QString valueA, valueB;
-        switch (column) {
-        case 0: valueA = a.timestamp; valueB = b.timestamp; break;
-        case 1: valueA = a.clientId; valueB = b.clientId; break;
-        case 2: valueA = a.dataType; valueB = b.dataType; break;
-        case 3: valueA = a.content; valueB = b.content; break;
-        default: return false;
+    std::sort(m_data.begin(), m_data.end(), [key, order](const QVariantMap& a, const QVariantMap& b) {
+        QVariant valueA = a[key];
+        QVariant valueB = b[key];
+
+        // Специальная обработка для чисел
+        if (key == Keys::PORT || key == Keys::STATUS) {
+            if (order == Qt::AscendingOrder) {
+                return valueA.toInt() < valueB.toInt();
+            } else {
+                return valueA.toInt() > valueB.toInt();
+            }
         }
-        return order == Qt::AscendingOrder ? valueA < valueB : valueA > valueB;
+
+        // Специальная обработка для времени
+        if (key == Keys::TIME_STAMP) {
+            QTime timeA = QTime::fromString(valueA.toString(), "hh:mm:ss.zzz");
+            QTime timeB = QTime::fromString(valueB.toString(), "hh:mm:ss.zzz");
+            if (order == Qt::AscendingOrder) {
+                return timeA < timeB;
+            } else {
+                return timeA > timeB;
+            }
+        }
+
+        // Обычная строковая сортировка
+        if (order == Qt::AscendingOrder) {
+            return valueA.toString().toLower() < valueB.toString().toLower();
+        } else {
+            return valueA.toString().toLower() > valueB.toString().toLower();
+        }
     });
     endResetModel();
 }
 
-// ServerViewModel Implementation
-ServerViewModel::ServerViewModel(QObject *parent)
-    : QObject(parent)
-    , m_serverLogic(new TcpServer)
-    , m_serverThread(new QThread(this))
-    , m_clientTableModel(new ClientTableModel(this))
-    , m_dataTableModel(new DataTableModel(this))
+QVariantMap TableModel::getRowData(int row) const
 {
-    m_serverLogic->moveToThread(m_serverThread);
-    connect(m_serverThread, &QThread::finished, m_serverLogic, &QObject::deleteLater);
-    connect(m_serverLogic, &TcpServer::clientConnected, this, &ServerViewModel::onClientConnected);
-    connect(m_serverLogic, &TcpServer::clientDisconnected, this, &ServerViewModel::onClientDisconnected);
-    connect(m_serverLogic, &TcpServer::dataReceived, this, &ServerViewModel::onDataReceived);
-    connect(m_serverLogic, &TcpServer::logMessage, this, &ServerViewModel::onLogMessage);
-    m_serverThread->start();
+    if (row >= 0 && row < m_data.size()) {
+        return m_data.at(row);
+    }
+    return QVariantMap();
 }
 
-ServerViewModel::~ServerViewModel() {
-    m_serverThread->quit();
-    m_serverThread->wait();
+// ================= ServerViewModel =================
+
+#include <QTime>
+#include <QDebug>
+
+ServerViewModel::ServerViewModel(IServer* server, QObject *parent)
+    : QObject(parent), m_clientSortOrder(Qt::AscendingOrder), m_dataSortOrder(Qt::AscendingOrder)
+{
+    // Создаем модели таблиц
+    QStringList clientKeys      = {Keys::ID,        Keys::ADDRESS,  Keys::STATUS,   Keys::ALLOW_SENDING};
+    QStringList clientHeaders   = {"ID Клиента",    "Адрес",        "Статус",       "Отправка"};
+    QList<qreal> clientWidth    = {0.25,            0.30,           0.25,           0.20};
+
+    QStringList dataKeys        = {Keys::TIME_STAMP,Keys::ID,       Keys::TYPE,     Keys::PAYLOAD};
+    QStringList dataHeaders     = {"Время",         "ID",           "Тип",          "Сообщение"};
+    QList<qreal> dataWidth      = {0.15,            0.20,           0.15,           0.50};
+
+
+    m_clientTableModel  = new TableModel(clientKeys, clientHeaders, this);
+    m_dataTableModel    = new TableModel(dataKeys, dataHeaders, this);
+
+    m_clientTableModel->setColumnWidths(clientWidth);
+    m_dataTableModel->setColumnWidths(dataWidth);
+
+    // Настраиваем рабочий поток
+    setupWorkerThread();
+
+    // Передаем сервер в рабочий поток
+    if (server) {
+        server->moveToThread(m_workerThread);
+        m_serverWorker->setServer(server);
+    }
 }
 
-QString ServerViewModel::logText() const {
+ServerViewModel::~ServerViewModel()
+{
+    if (m_workerThread) {
+        m_workerThread->quit();
+        m_workerThread->wait(WORKER_THREAD_WAIT_TIMEOUT_MS);
+        m_workerThread->deleteLater();
+    }
+}
+
+void ServerViewModel::setupWorkerThread()
+{
+    m_workerThread = new QThread(this);
+    m_serverWorker = new ServerWorker();
+    m_serverWorker->moveToThread(m_workerThread);
+
+    // Подключаем сигналы от рабочего потока к UI
+    connect(m_serverWorker, &ServerWorker::clientUpdateReady,
+            this, &ServerViewModel::handleClientUpdate, Qt::QueuedConnection);
+    connect(m_serverWorker, &ServerWorker::dataReceivedReady,
+            this, &ServerViewModel::handleDataReceived, Qt::QueuedConnection);
+    connect(m_serverWorker, &ServerWorker::logMessageReady,
+            this, &ServerViewModel::handleLogMessage, Qt::QueuedConnection);
+    connect(m_serverWorker, &ServerWorker::serverStarted,
+            this, &ServerViewModel::handleServerStarted, Qt::QueuedConnection);
+    connect(m_serverWorker, &ServerWorker::serverStopped,
+            this, &ServerViewModel::handleServerStopped, Qt::QueuedConnection);
+
+    // Подключаем сигналы от UI к рабочему потоку
+    connect(this, &ServerViewModel::startServerRequested,
+            m_serverWorker, &ServerWorker::startServer, Qt::QueuedConnection);
+    connect(this, &ServerViewModel::stopServerRequested,
+            m_serverWorker, &ServerWorker::stopServer, Qt::QueuedConnection);
+    connect(this, &ServerViewModel::sendToAllRequested,
+            m_serverWorker, &ServerWorker::sendToAllClients, Qt::QueuedConnection);
+    connect(this, &ServerViewModel::updateClientConfigRequested,
+            m_serverWorker, &ServerWorker::updateClientConfiguration, Qt::QueuedConnection);
+    connect(this, &ServerViewModel::removeDisconnectedRequested,
+            m_serverWorker, &ServerWorker::removeDisconnectedClients, Qt::QueuedConnection);
+    connect(this, &ServerViewModel::clearClientsRequested,
+            m_serverWorker, &ServerWorker::clearClients, Qt::QueuedConnection);
+
+    // Очистка при завершении потока
+    connect(m_workerThread, &QThread::finished, m_serverWorker, &QObject::deleteLater);
+
+    m_workerThread->start();
+}
+
+void ServerViewModel::startServer(quint16 port)
+{
+    emit startServerRequested(port);
+}
+
+void ServerViewModel::stopServer()
+{
+    emit stopServerRequested();
+}
+
+void ServerViewModel::startAllClients()
+{
+    QVariantMap message;
+    message[Keys::TYPE] = Protocol::MessageType::COMMAND;
+    message[Protocol::Keys::COMMAND] = Protocol::Commands::START;
+    emit sendToAllRequested(message);
+}
+
+void ServerViewModel::stopAllClients()
+{
+    QVariantMap message;
+    message[Keys::TYPE] = Protocol::MessageType::COMMAND;
+    message[Protocol::Keys::COMMAND] = Protocol::Commands::STOP;
+    emit sendToAllRequested(message);
+}
+
+void ServerViewModel::removeDisconnectedClients()
+{
+    for (int i = m_clientTableModel->rowCount() - 1; i >= 0; --i) {
+        QVariantMap client = m_clientTableModel->getRowData(i);
+        if (client[Keys::STATUS] == AppEnums::DISCONNECTED)
+        {
+            m_clientTableModel->removeRow(i);
+        }
+    }
+
+    emit removeDisconnectedRequested();
+}
+
+void ServerViewModel::updateClientConfiguration(const QVariantMap& config)
+{
+    emit updateClientConfigRequested(config);
+}
+
+TableModel* ServerViewModel::clientTableModel() const
+{
+    return m_clientTableModel;
+}
+
+TableModel* ServerViewModel::dataTableModel() const
+{
+    return m_dataTableModel;
+}
+
+QString ServerViewModel::logText() const
+{
     return m_logText;
 }
 
-void ServerViewModel::startServer() {
-    QMetaObject::invokeMethod(m_serverLogic, "startServer", Qt::QueuedConnection, Q_ARG(quint16, 12345));
+void ServerViewModel::sortClients(int columnIndex)
+{
+    m_clientTableModel->sortByColumn(columnIndex, m_clientSortOrder);
+    m_clientSortOrder = (m_clientSortOrder == Qt::AscendingOrder) ? Qt::DescendingOrder : Qt::AscendingOrder;
 }
 
-void ServerViewModel::stopServer() {
-    QMetaObject::invokeMethod(m_serverLogic, "stopServer", Qt::QueuedConnection);
-    m_clientTableModel->clear();
-    m_dataTableModel->clear();
+void ServerViewModel::sortData(int columnIndex)
+{
+    m_dataTableModel->sortByColumn(columnIndex, m_dataSortOrder);
+    m_dataSortOrder = (m_dataSortOrder == Qt::AscendingOrder) ? Qt::DescendingOrder : Qt::AscendingOrder;
 }
 
-void ServerViewModel::startAllClients() {
-    QMetaObject::invokeMethod(m_serverLogic, "sendCommandToAll", Qt::QueuedConnection, Q_ARG(TcpServer::CommandType, TcpServer::CommandType::Start));
-}
-
-void ServerViewModel::stopAllClients() {
-    QMetaObject::invokeMethod(m_serverLogic, "sendCommandToAll", Qt::QueuedConnection, Q_ARG(TcpServer::CommandType, TcpServer::CommandType::Stop));
-}
-
-void ServerViewModel::sortClients(int column) {
-    if (m_clientSortColumn == column) {
-        // Меняем порядок сортировки если колонка та же
-        m_clientSortOrder = (m_clientSortOrder == Qt::AscendingOrder) ? Qt::DescendingOrder : Qt::AscendingOrder;
-    } else {
-        // Новая колонка - начинаем с возрастающего порядка
-        m_clientSortColumn = column;
-        m_clientSortOrder = Qt::AscendingOrder;
-    }
-    m_clientTableModel->sort(column, m_clientSortOrder);
-}
-
-void ServerViewModel::sortData(int column) {
-    if (m_dataSortColumn == column) {
-        // Меняем порядок сортировки если колонка та же
-        m_dataSortOrder = (m_dataSortOrder == Qt::AscendingOrder) ? Qt::DescendingOrder : Qt::AscendingOrder;
-    } else {
-        // Новая колонка - начинаем с возрастающего порядка
-        m_dataSortColumn = column;
-        m_dataSortOrder = Qt::AscendingOrder;
-    }
-    m_dataTableModel->sort(column, m_dataSortOrder);
-}
-
-void ServerViewModel::onClientConnected(quintptr descriptor, const QString& ip, quint16 port) {
-    m_clientTableModel->addClient(descriptor, ip, port);
-}
-
-void ServerViewModel::onClientDisconnected(quintptr descriptor) {
-    m_clientTableModel->updateClientStatus(descriptor, "Отключен");
-}
-
-void ServerViewModel::onDataReceived(quintptr descriptor, const QJsonObject& data, const QString& clientId) {
-    m_clientTableModel->updateClientId(descriptor, clientId);
-
-    QString type = data["type"].toString("Unknown");
-    QString timestamp = QDateTime::currentDateTime().toString("hh:mm:ss.zzz");
-
-    if (type == "NetworkMetrics" || type == "DeviceStatus") {
-        for (auto it = data.constBegin(); it != data.constEnd(); ++it) {
-            if (it.key() == "type" || it.key() == "id") continue;
-            QString content = QString("%1: %2").arg(it.key(), it.value().toVariant().toString());
-            m_dataTableModel->addData(timestamp, clientId, type, content);
-        }
-    } else if (type != "Identification") {
-        QString content;
-        for (auto it = data.constBegin(); it != data.constEnd(); ++it) {
-            if (it.key() == "type" || it.key() == "id") continue;
-            content += it.key() + ": " + it.value().toVariant().toString() + "; ";
-        }
-        if (!content.isEmpty()) {
-            content.chop(2); // Убираем последние "; "
-        }
-        m_dataTableModel->addData(timestamp, clientId, type, content);
-    }
-}
-
-void ServerViewModel::onLogMessage(const QString& message) {
-    QString timestamp = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss");
-    m_logText.prepend(QString("[%1] %2\n").arg(timestamp, message));
+void ServerViewModel::clearLog()
+{
+    m_logText.clear();
     emit logTextChanged();
 }
 
-#include "serverviewmodel.moc"
+void ServerViewModel::handleClientUpdate(const QVariantMap& clientData)
+{
+    updateClientInModel(clientData);
+}
+
+void ServerViewModel::handleDataReceived(const QVariantMap& data)
+{
+    m_dataTableModel->addRow(data);
+    if (m_dataTableModel->rowCount() > MAX_DATA_TABLE_ROWS) {
+        m_dataTableModel->removeRow(m_dataTableModel->rowCount() - 1);
+    }
+}
+
+void ServerViewModel::handleLogMessage(const QString& message)
+{
+    QString timestamp = QTime::currentTime().toString("hh:mm:ss.zzz");
+    m_logText.prepend(QString("%1 | %2\n").arg(timestamp).arg(message));
+
+    if (m_logText.length() > MAX_LOG_TEXT_LENGTH) {
+        m_logText = m_logText.left(LOG_TRIM_LENGTH);
+    }
+
+    emit logTextChanged();
+}
+
+void ServerViewModel::handleServerStarted()
+{
+    handleLogMessage("Сервер успешно запущен");
+}
+
+void ServerViewModel::handleServerStopped()
+{
+    m_clientTableModel->clear();
+    m_dataTableModel->clear();
+    handleLogMessage("Сервер остановлен");
+}
+
+void ServerViewModel::updateClientInModel(const QVariantMap& clientData)
+{
+    int status = clientData[Keys::STATUS].toInt();
+    QString key = (status == AppEnums::DISCONNECTED) ? Keys::ID : Keys::DESCRIPTOR;
+
+    bool found = false;
+    for (int i = 0; i < m_clientTableModel->rowCount(); ++i) {
+        QVariantMap existingClient = m_clientTableModel->getRowData(i);
+        if (existingClient[key].toString() == clientData[key].toString()) {
+            m_clientTableModel->updateRow(i, clientData);
+            found = true;
+            break;
+        }
+    }
+
+    if (!found && status != AppEnums::DISCONNECTED) {
+        m_clientTableModel->addRow(clientData);
+    }
+}
+
+void ServerViewModel::removeClientFromModel(const QString& descriptor)
+{
+    for (int i = 0; i < m_clientTableModel->rowCount(); ++i) {
+        QVariantMap clientData = m_clientTableModel->getRowData(i);
+        if (clientData[Keys::DESCRIPTOR].toString() == descriptor) {
+            m_clientTableModel->removeRow(i);
+            break;
+        }
+    }
+}
+

@@ -25,6 +25,14 @@ qt_add_qml_module(Server
         SOURCES tcpclient.h tcpclient.cpp
         SOURCES iclient.h
         SOURCES
+        SOURCES iserver.h
+        SOURCES protocol.h
+        SOURCES dataprocessing.h dataprocessing.cpp
+        SOURCES serverfactory.h
+        SOURCES sharedkeys.h
+        SOURCES appenums.h
+        QML_FILES ConfigurationDialog.qml
+        SOURCES serverworker.h serverworker.cpp
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.

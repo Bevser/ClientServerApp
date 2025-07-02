@@ -6,12 +6,12 @@
 #include <QVariant>
 #include <QVariantMap>
 #include <QVariantList>
-#include <algorithm>
 
 #include "serverworker.h"
 #include "iserver.h"
 #include "sharedkeys.h"
 #include "appenums.h"
+
 
 // ================= TableModel Class =================
 
@@ -27,7 +27,7 @@ public:
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
     QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
-    // Методы для управления данными
+    // --- Методы для управления данными ---
     void setData(const QList<QVariantMap>& data);
     void addRow(const QVariantMap& rowData);
     void updateRow(int row, const QVariantMap& rowData);
@@ -35,24 +35,25 @@ public:
     void clear();
     void sortByColumn(int column, Qt::SortOrder order);
 
-    // Метод для получения данных строки (для QML)
+    // --- Конфигурация ---
+    void setColumnWidths(const QList<qreal>& widths);
+
+
+    // --- Методы для QML ---
     Q_INVOKABLE QVariantMap getRowData(int row) const;
 
-    // Свойства для получения информации о колонках в QML
     Q_PROPERTY(QStringList columnHeaders READ columnHeaders CONSTANT)
     Q_PROPERTY(QList<qreal> columnWidths READ columnWidths CONSTANT)
 
     QStringList columnHeaders() const { return m_headers; }
     QList<qreal> columnWidths() const { return m_columnWidths; }
 
-    // Метод для установки ширины колонок
-    void setColumnWidths(const QList<qreal>& widths) { m_columnWidths = widths; }
 
 private:
-    QStringList m_keys;             // Ключи колонок
-    QStringList m_headers;          // Заголовки колонок для отображения
-    QList<QVariantMap> m_data;      // Данные таблицы
-    QList<qreal> m_columnWidths;    // Ширина колонок (в процентах)
+    QStringList m_keys;
+    QStringList m_headers;
+    QList<QVariantMap> m_data;
+    QList<qreal> m_columnWidths;
 };
 
 // ================= ServerViewModel Class =================
@@ -66,12 +67,11 @@ class ServerViewModel : public QObject
 
 
     static constexpr int WORKER_THREAD_WAIT_TIMEOUT_MS  = 5000;     // Таймаут ожидания завершения потока
-    static constexpr int MAX_DATA_TABLE_ROWS            = 200;      // Максимальное количество строк в таблице данных
-    static constexpr int MAX_LOG_TEXT_LENGTH            = 10000;    // Максимальная длина текста лога и длина после обрезки
-    static constexpr int LOG_TRIM_LENGTH                = 8000;     // Чтобы не обрезать до нуля, оставляем небольшой буфер
+    static constexpr int MAX_DATA_TABLE_ROWS            = 3000;     // Максимальное количество строк в таблице данных
+    static constexpr int DATA_TABLE_TRIM_LENGTH         = 1000;     // Чтобы не обрезать до нуля, оставляем небольшой буфер
 
 public:
-    explicit ServerViewModel(IServer* server, QObject *parent = nullptr);
+    explicit ServerViewModel(QObject *parent = nullptr);
     ~ServerViewModel();
 
     // Геттеры для QML
@@ -102,8 +102,8 @@ signals:
     void logTextChanged();
 
     // Сигналы для отправки команд в рабочий поток
-    void startServerRequested(quint16 port);
-    void stopServerRequested();
+    void startServerRequested(AppEnums::ServerType type, quint16 port);
+    void stopServerRequested(AppEnums::ServerType type, quint16 port);
     void sendToAllRequested(const QVariantMap &data);
     void updateClientConfigRequested(const QVariantMap &config);
     void removeDisconnectedRequested();
@@ -114,7 +114,7 @@ private:
     void updateClientInModel(const QVariantMap& clientData);
     void removeClientFromModel(const QString& descriptor);
 
-    // UI модели (остаются в главном потоке)
+    // UI модели
     TableModel* m_clientTableModel;
     TableModel* m_dataTableModel;
     QString m_logText;

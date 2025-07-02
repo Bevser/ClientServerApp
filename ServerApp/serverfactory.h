@@ -3,20 +3,14 @@
 #define SERVERFACTORY_H
 
 #include "tcpserver.h"
-
-enum class ServerType {
-    TCP,
-    UDP,
-    MODBUS_TCP,
-    MODBUS_RTU
-};
+#include "appenums.h"
 
 class ServerFactory {
 public:
-    static IServer* createServer(ServerType type, QObject* parent = nullptr) {
-        if (type == ServerType::TCP) {
+    static IServer* createServer(AppEnums::ServerType type, QObject* parent = nullptr) {
+        if (type == AppEnums::ServerType::TCP) {
             return new TcpServer(parent);
-        } else if (type == ServerType::UDP) { // Пример
+        } else if (type == AppEnums::ServerType::UDP) { // Пример
             // return new UdpServer(parent);
             return nullptr;
         }

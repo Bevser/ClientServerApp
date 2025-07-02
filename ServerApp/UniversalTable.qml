@@ -15,17 +15,17 @@ Item {
     property var cellStyler: null
 
     // Настройки стилей
-    property color headerColor: "#37474f"
-    property color headerHoverColor: "#455a64"
-    property color headerBorderColor: "#263238"
-    property color headerTextColor: "white"
-    property color evenRowColor: "#ffffff"
-    property color oddRowColor: "#f8f9fa"
-    property color hoverRowColor: "#f0f8f0"
-    property color selectedRowColor: "#e8f5e8"
-    property color borderColor: "#e0e0e0"
-    property color textColor: "#424242"
-    property string fontFamily: "Arial"
+    property color headerColor:         "#37474f"
+    property color headerHoverColor:    "#455a64"
+    property color headerBorderColor:   "#263238"
+    property color headerTextColor:     "white"
+    property color evenRowColor:        "#ffffff"
+    property color oddRowColor:         "#f8f9fa"
+    property color hoverRowColor:       "#f0f8f0"
+    property color selectedRowColor:    "#dcf0dc"
+    property color borderColor:         "#e0e0e0"
+    property color textColor:           "#424242"
+    property string fontFamily:         "Arial"
     property int fontSize: 11
     property int rowHeight: 35
     property int headerHeight: 35
@@ -204,7 +204,6 @@ Item {
                         }
 
                         onExited: {
-                            // Запускаем таймер вместо немедленного сброса
                             hoverTimer.start()
                         }
 

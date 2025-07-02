@@ -4,13 +4,12 @@
 #include <QQuickWindow>
 #include <QQuickStyle>
 #include "serverviewmodel.h"
-#include "serverfactory.h"
 
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
 
-    QQuickWindow::setGraphicsApi(QSGRendererInterface::Vulkan);
+    QQuickWindow::setGraphicsApi(QSGRendererInterface::Software);
 
     QQmlApplicationEngine engine;
 
@@ -18,9 +17,7 @@ int main(int argc, char *argv[])
         return new AppEnums();
     });
 
-    IServer* tcpServer = ServerFactory::createServer(ServerType::TCP);
-
-    ServerViewModel serverViewModel(tcpServer);
+    ServerViewModel serverViewModel;
 
     engine.rootContext()->setContextProperty("viewModel", &serverViewModel);
 

@@ -32,10 +32,10 @@ public:
     void addServer(IServer* server);
 
 public slots:
-    void sendToAll(const QVariantMap &data);
+    void sendDataToAll(const QVariantMap &data);
 
-    void dataToClient(const QVariantMap &data);
-    void routeDataToClient(IClient* client, const QByteArray& data);
+    void routeDataToClient(const QVariantMap &data);
+    void sendDataToClient(IClient* client, const QByteArray& data);
     void removeDisconnectedClients();
     void clearClients();
 
@@ -57,7 +57,6 @@ private:
     void registerClient(IClient* client, const QString &id, const QJsonObject &payload);
     QVariantMap getClientDataMap(const ClientState& state);
 
-    QList<IServer*> m_servers;
     QHash<quintptr, ClientState> m_clients;
 };
 

@@ -1,11 +1,14 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import enums 1.0
 
 ApplicationWindow {
     id: root
     width: 1280
     height: 800
+    minimumHeight: 600
+    minimumWidth: 800
     visible: true
     title: "Сервер управления"
     color: "#f0f0f0"
@@ -157,7 +160,7 @@ ApplicationWindow {
             // Левая панель — клиенты
             Frame {
                 SplitView.preferredWidth: 470
-                SplitView.minimumWidth: 280
+                SplitView.minimumWidth: 320
 
                 UniversalTable {
                     id: clientTable
@@ -194,11 +197,11 @@ ApplicationWindow {
                     cellStyler: function(row, column, value) {
                         // Колонка статуса (индекс 2)
                         if (column === 2) {
-                            if (value === "Зарегистрирован") {
+                            if (value === AppEnums.statusToString(AppEnums.CONNECTED)) {
                                 return {color: "#4CAF50", bold: true}
-                            } else if (value === "Подключен") {
+                            } else if (value === AppEnums.statusToString(AppEnums.AUTHORIZING)) {
                                 return {color: "#FF9800", bold: true}
-                            } else if (value === "Отключен") {
+                            } else if (value === AppEnums.statusToString(AppEnums.DISCONNECTED)) {
                                 return {color: "#f44336", bold: true}
                             }
                         }
@@ -253,15 +256,14 @@ ApplicationWindow {
                         // Кастомная функция для стилизации ячеек типа сообщения
                         cellStyler: function(row, column, value) {
                             // Колонка типа (индекс 2)
-                            if (column === 2) {
-                                if (value === "Registration") {
-                                    return {color: "#2196F3", bold: true}
-                                } else if (value === "Data") {
-                                    return {color: "#4CAF50", bold: false}
-                                } else if (value === "Command") {
-                                    return {color: "#FF9800", bold: true}
-                                } else if (value === "Configuration") {
-                                    return {color: "#9C27B0", bold: true}
+                            if (column === 2) {                               
+
+                                if (value === "NetworkMetrics") {
+                                    return {color: "#0891b2", bold: false}
+                                } else if (value === "DeviceStatus") {
+                                    return {color: "#2196F3", bold: false}
+                                } else if (value === "Log") {
+                                    return {color: "#8f4cf6", bold: false}
                                 }
                             }
                             return {color: "#424242", bold: false}

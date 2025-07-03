@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
         return new AppEnums();
     });
 
-    ServerViewModel serverViewModel;
+    ServerViewModel serverViewModel(&app);
 
     engine.rootContext()->setContextProperty("viewModel", &serverViewModel);
 

@@ -2,7 +2,7 @@
 
 // Конструктор
 TcpClient::TcpClient(QTcpSocket *socket, QObject *parent)
-    : IClient(parent), m_socket(socket), m_id("")
+    : IClient(parent), m_socket(socket), m_id(""), m_descriptor(socket->socketDescriptor())
 {
     if (!m_socket) return;
 
@@ -21,7 +21,7 @@ TcpClient::TcpClient(QTcpSocket *socket, QObject *parent)
 }
 
 quintptr TcpClient::descriptor() const {
-    return m_socket ? m_socket->socketDescriptor() : 0;
+    return m_socket ? m_descriptor : 0;
 }
 
 bool TcpClient::isConnected() const {

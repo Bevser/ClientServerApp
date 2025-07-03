@@ -1,8 +1,7 @@
 #include "dataprocessing.h"
 
 DataProcessing::DataProcessing(QObject *parent)
-    : QObject(parent)
-{
+    : QObject(parent) {
 
 }
 
@@ -20,7 +19,7 @@ void DataProcessing::handleClientConnected(IClient* client) {
     if (!client) return;
 
     quintptr descriptor = client->descriptor();
-    client->setId(QString::number(client->descriptor()));
+    client->setId(QString::number(descriptor));
 
     ClientState state;
     state.client            = client;
@@ -29,29 +28,41 @@ void DataProcessing::handleClientConnected(IClient* client) {
 
     m_clients[descriptor]   = state;
 
-    emit clientUpdate(getClientDataMap(state));
+    m_clientBatch.append(getClientDataMap(state));
     emit logMessage(QString("Клиент %1 (%2:%3) подключен.").
                     arg(client->id()).arg(client->address()).arg(client->port()));
+}
+
+QList<QVariantMap> DataProcessing::takeClientUpdatesBatch() {
+    QList<QVariantMap> batch;
+    if (!m_clientBatch.isEmpty()) {
+        batch.swap(m_clientBatch);
+    }
+    return batch;
+}
+
+QList<QVariantMap> DataProcessing::takeDataBatch() {
+    QList<QVariantMap> batch;
+    if (!m_dataBatch.isEmpty()) {
+        batch.swap(m_dataBatch);
+    }
+    return batch;
 }
 
 void DataProcessing::handleClientDisconnected(IClient* client) {
     if (!client) return;
 
-    for (auto it = m_clients.begin(); it != m_clients.end(); ++it) {
-        if (it.value().client == client) {
-            ClientState& state = it.value();
-            state.status        = AppEnums::DISCONNECTED;
-            state.allowSending  = false;
+    if (m_clients.contains(client->descriptor())) {
+        ClientState& state = m_clients[client->descriptor()];
+        state.status        = AppEnums::DISCONNECTED;
+        state.allowSending  = false;
 
-            emit clientUpdate(getClientDataMap(state));
-            emit logMessage(QString("Клиент %1 (%2:%3) отключен.").
-                            arg(client->id()).arg(client->address()).arg(client->port()));
-
-            return;
-        }
+        m_clientBatch.append(getClientDataMap(state));
+        emit logMessage(QString("Клиент %1 (%2:%3) отключен.").
+                        arg(client->id()).arg(client->address()).arg(client->port()));
+    } else {
+        emit logMessage(QString("Получен сигнал отключения для незарегистрированного клиента."));
     }
-
-    emit logMessage(QString("Получен сигнал отключения для незарегистрированного клиента."));
 }
 
 void DataProcessing::removeDisconnectedClients() {
@@ -62,6 +73,9 @@ void DataProcessing::removeDisconnectedClients() {
     while (it != m_clients.end()) {
         if (it.value().status == AppEnums::DISCONNECTED) {
             IClient* client = it.value().client;
+            m_usedClientIds.remove(client->id());
+            it.value().status = AppEnums::DELETED;
+            m_clientBatch.append(getClientDataMap(it.value()));
 
             if (IServer* server = qobject_cast<IServer*>(client->parent())) {
                 server->removeClient(client);
@@ -85,7 +99,7 @@ void DataProcessing::clearClients()
 QVariantMap DataProcessing::getClientDataMap(const ClientState& state) {
     QVariantMap clientData;
     clientData[Keys::ID]            = state.client->id();
-    clientData[Keys::DESCRIPTOR]    = QString::number(state.client->descriptor());
+    clientData[Keys::DESCRIPTOR]    = state.client->descriptor();
     clientData[Keys::ADDRESS]       = QString("%1:%2").arg(state.client->address()).arg(state.client->port());
     clientData[Keys::PORT]          = state.client->port();
     clientData[Keys::STATUS]        = state.status;
@@ -144,7 +158,7 @@ void DataProcessing::parseJsonData(IClient* client, const QByteArray &data) {
         messageData[Keys::ID]           = clientId;
         messageData[Keys::TYPE]         = messageType;
         messageData[Keys::PAYLOAD]      = payload.toVariantMap();
-        emit dataReceived(messageData);
+        m_dataBatch.append(messageData);
     } else {
         emit logMessage(QString("Получены данные от незарегистрированного клиента %1 типа %2").arg(client->descriptor()).arg(messageType));
     }
@@ -174,32 +188,18 @@ void DataProcessing::registerClient(IClient* client, const QString &id, const QJ
         // Проверка id на дублирование
         int suffix = 0;
 
-        bool idConflict = true;
-        while (idConflict) {
-            idConflict = false;
-            for (auto it = m_clients.begin(); it != m_clients.end(); ++it) {
-                quintptr currentDescriptor          = it.key();
-                const ClientState& existingState    = it.value();
-
-                if (currentDescriptor != descriptor &&
-                    existingState.status != AppEnums::ClientStatus::DISCONNECTED &&
-                    existingState.client &&
-                    existingState.client->id() == newId)
-                {
-                    suffix++;
-                    newId       = QString("%1_%2").arg(id).arg(suffix);
-                    idConflict  = true;
-                    break;
-                }
-            }
+        while (m_usedClientIds.contains(newId)) {
+            suffix++;
+            newId = QString("%1_%2").arg(id).arg(suffix);
         }
 
         state.status        = AppEnums::ClientStatus::CONNECTED;
         state.allowSending  = true;
         state.configuration = payload.toVariantMap();
         client->setId(newId);
+        m_usedClientIds.insert(newId);
 
-        emit clientUpdate(getClientDataMap(m_clients[descriptor]));
+        m_clientBatch.append(getClientDataMap(m_clients[descriptor]));
 
         emit logMessage(QString("Клиент %1 (%2:%3) успешно зарегистрирован с ID: %4")
                             .arg(oldId)
@@ -212,8 +212,6 @@ void DataProcessing::registerClient(IClient* client, const QString &id, const QJ
     jsonData[Protocol::Keys::TYPE]  = Protocol::MessageType::CONFIRMATION;
 
     sendDataToClient(client, QJsonDocument(jsonData).toJson(QJsonDocument::Compact));
-
-    emit logMessage(QString("Подтверждение регистрации отправлено клиенту %1").arg(newId));
 }
 
 void DataProcessing::routeDataToClient(const QVariantMap &data) {
@@ -226,7 +224,7 @@ void DataProcessing::routeDataToClient(const QVariantMap &data) {
         {
             m_clients[dc].allowSending  = data[Keys::ALLOW_SENDING].toBool();
             m_clients[dc].configuration = data[Keys::PAYLOAD].toMap();
-            emit clientUpdate(getClientDataMap(state));
+            m_clientBatch.append(getClientDataMap(state));
         }
 
         QJsonDocument jsonDoc = QJsonDocument::fromVariant(data);
@@ -249,13 +247,17 @@ void DataProcessing::sendDataToClient(IClient* client, const QByteArray& data) {
     }
 }
 
-void DataProcessing::sendDataToAll(const QVariantMap &data) {
+void DataProcessing::sendDataToAll(const QString &data) {
     int count = 0;
-    QByteArray jsonData = QJsonDocument(QJsonObject::fromVariantMap(data)).toJson(QJsonDocument::Compact);
+
+    QJsonObject jsonData;
+    jsonData[Protocol::Keys::TYPE]      = Protocol::MessageType::COMMAND;
+    jsonData[Protocol::Keys::COMMAND]   = data;
 
     for (const auto& state : qAsConst(m_clients)) {
         if (state.allowSending && state.client && state.client->isConnected()) {
-            sendDataToClient(state.client, jsonData);
+            sendDataToClient(state.client,
+                             QJsonDocument(jsonData).toJson(QJsonDocument::Compact));
             count++;
         }
     }

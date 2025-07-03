@@ -37,6 +37,7 @@ private slots:
 private:
     QTcpSocket* m_socket;
     QString m_id;
+    quintptr m_descriptor;
 };
 
 #endif // TCPCLIENT_H

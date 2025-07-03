@@ -2,61 +2,13 @@
 #define SERVERVIEWMODEL_H
 
 #include <QObject>
-#include <QAbstractTableModel>
 #include <QVariant>
 #include <QVariantMap>
 #include <QVariantList>
 
 #include "serverworker.h"
 #include "iserver.h"
-#include "sharedkeys.h"
-#include "appenums.h"
-
-
-// ================= TableModel Class =================
-
-class TableModel : public QAbstractTableModel
-{
-    Q_OBJECT
-
-public:
-    explicit TableModel(const QStringList& keys, const QStringList& headers, QObject *parent = nullptr);
-
-    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
-    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
-    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
-    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
-
-    // --- Методы для управления данными ---
-    void setData(const QList<QVariantMap>& data);
-    void addRow(const QVariantMap& rowData);
-    void updateRow(int row, const QVariantMap& rowData);
-    void removeRow(int row);
-    void clear();
-    void sortByColumn(int column, Qt::SortOrder order);
-
-    // --- Конфигурация ---
-    void setColumnWidths(const QList<qreal>& widths);
-
-
-    // --- Методы для QML ---
-    Q_INVOKABLE QVariantMap getRowData(int row) const;
-
-    Q_PROPERTY(QStringList columnHeaders READ columnHeaders CONSTANT)
-    Q_PROPERTY(QList<qreal> columnWidths READ columnWidths CONSTANT)
-
-    QStringList columnHeaders() const { return m_headers; }
-    QList<qreal> columnWidths() const { return m_columnWidths; }
-
-
-private:
-    QStringList m_keys;
-    QStringList m_headers;
-    QList<QVariantMap> m_data;
-    QList<qreal> m_columnWidths;
-};
-
-// ================= ServerViewModel Class =================
+#include "tablemodel.h"
 
 class ServerViewModel : public QObject
 {
@@ -80,8 +32,8 @@ public:
     QString logText() const;
 
     // Методы, вызываемые из QML
-    Q_INVOKABLE void startServer(quint16 port);
-    Q_INVOKABLE void stopServer();
+    Q_INVOKABLE void startServer(AppEnums::ServerType type, quint16 port);
+    Q_INVOKABLE void stopServer(AppEnums::ServerType type, quint16 port);
     Q_INVOKABLE void startAllClients();
     Q_INVOKABLE void stopAllClients();
     Q_INVOKABLE void removeDisconnectedClients();
@@ -92,8 +44,8 @@ public:
 
 public slots:
     // Слоты для обработки сигналов от рабочего потока
-    void handleClientUpdate(const QVariantMap& clientData);
-    void handleDataReceived(const QVariantMap& data);
+    void handleClientBatchUpdate(const QList<QVariantMap>& clientBatch);
+    void handleDataBatchReceived(const QList<QVariantMap>& dataBatch);
     void handleLogMessage(const QString& message);
     void handleServerStarted();
     void handleServerStopped();
@@ -104,7 +56,7 @@ signals:
     // Сигналы для отправки команд в рабочий поток
     void startServerRequested(AppEnums::ServerType type, quint16 port);
     void stopServerRequested(AppEnums::ServerType type, quint16 port);
-    void sendToAllRequested(const QVariantMap &data);
+    void sendToAllRequested(const QString &command);
     void updateClientConfigRequested(const QVariantMap &config);
     void removeDisconnectedRequested();
     void clearClientsRequested();
@@ -112,20 +64,20 @@ signals:
 private:
     void setupWorkerThread();
     void updateClientInModel(const QVariantMap& clientData);
-    void removeClientFromModel(const QString& descriptor);
 
     // UI модели
     TableModel* m_clientTableModel;
     TableModel* m_dataTableModel;
     QString m_logText;
 
+    // Переменные для хранения порядка сортировки
+    Qt::SortOrder m_clientSortOrder;
+    Qt::SortOrder m_dataSortOrder;
+
     // Рабочий поток
     QThread* m_workerThread;
     ServerWorker* m_serverWorker;
 
-    // Переменные для хранения порядка сортировки
-    Qt::SortOrder m_clientSortOrder;
-    Qt::SortOrder m_dataSortOrder;
 };
 
 

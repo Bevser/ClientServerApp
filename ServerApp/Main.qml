@@ -21,10 +21,6 @@ ApplicationWindow {
         onConfigurationAccepted: function(message) {
             viewModel.updateClientConfiguration(message)
         }
-
-        onSendingToggled: function(data) {
-            viewModel.toggleClientSending(data)
-        }
     }
 
     // Отладочная информация
@@ -50,13 +46,13 @@ ApplicationWindow {
 
             Button {
                 text: "Запустить сервер"
-                onClicked: viewModel.startServer(12345)
+                onClicked: viewModel.startServer(AppEnums.TCP, 12345)
                 highlighted: true
             }
 
             Button {
                 text: "Остановить сервер"
-                onClicked: viewModel.stopServer()
+                onClicked: viewModel.stopServer(AppEnums.TCP, 12345)
             }
 
             Rectangle {
@@ -118,6 +114,7 @@ ApplicationWindow {
             // Отладочная кнопка
             Button {
                 text: "Debug"
+                visible: false
                 onClicked: {
                     console.log("=== DEBUG INFO ===")
                     console.log("viewModel:", viewModel)

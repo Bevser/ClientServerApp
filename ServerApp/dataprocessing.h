@@ -8,6 +8,7 @@
 #include <QJsonDocument>
 #include <QJsonParseError>
 #include <QJsonObject>
+#include <QSet>
 
 #include "iclient.h"
 #include "iserver.h"
@@ -31,8 +32,11 @@ public:
 
     void addServer(IServer* server);
 
+    QList<QVariantMap> takeClientUpdatesBatch();
+    QList<QVariantMap> takeDataBatch();
+
 public slots:
-    void sendDataToAll(const QVariantMap &data);
+    void sendDataToAll(const QString &data);
 
     void routeDataToClient(const QVariantMap &data);
     void sendDataToClient(IClient* client, const QByteArray& data);
@@ -57,7 +61,10 @@ private:
     void registerClient(IClient* client, const QString &id, const QJsonObject &payload);
     QVariantMap getClientDataMap(const ClientState& state);
 
+    QList<QVariantMap> m_clientBatch;
+    QList<QVariantMap> m_dataBatch;
     QHash<quintptr, ClientState> m_clients;
+    QSet<QString> m_usedClientIds;
 };
 
 #endif // DATAPROCESSING_H

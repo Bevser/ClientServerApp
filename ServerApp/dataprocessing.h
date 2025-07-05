@@ -63,6 +63,7 @@ private:
 
     QList<QVariantMap> m_clientBatch;
     QList<QVariantMap> m_dataBatch;
+
     QHash<quintptr, ClientState> m_clients;
     QSet<QString> m_usedClientIds;
 };

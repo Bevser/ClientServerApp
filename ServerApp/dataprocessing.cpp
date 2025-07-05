@@ -94,6 +94,7 @@ void DataProcessing::removeDisconnectedClients() {
 void DataProcessing::clearClients()
 {
     m_clients.clear();
+    m_usedClientIds.clear();
 }
 
 QVariantMap DataProcessing::getClientDataMap(const ClientState& state) {
@@ -225,6 +226,9 @@ void DataProcessing::routeDataToClient(const QVariantMap &data) {
             m_clients[dc].allowSending  = data[Keys::ALLOW_SENDING].toBool();
             m_clients[dc].configuration = data[Keys::PAYLOAD].toMap();
             m_clientBatch.append(getClientDataMap(state));
+            emit logMessage(QString("Новая конфигурация отправлена клиенту %1, отправка команд: %2")
+                                .arg(data[Keys::ID].toString())
+                                .arg(data[Keys::ALLOW_SENDING].toBool() ? "разрешена" : "запрещена"));
         }
 
         QJsonDocument jsonDoc = QJsonDocument::fromVariant(data);
@@ -261,5 +265,5 @@ void DataProcessing::sendDataToAll(const QString &data) {
             count++;
         }
     }
-    emit logMessage(QString("Данные отправлены %1 клиентам.").arg(count));
+    emit logMessage(QString("Команда \"%1\" отправлена %2 клиентам.").arg(data).arg(count));
 }

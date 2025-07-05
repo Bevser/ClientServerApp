@@ -12,7 +12,6 @@ Item {
     property var onCellClicked: null
     property var onCellDoubleClicked: null
     property var onHeaderClicked: null
-    property var cellStyler: null
 
     // Настройки стилей
     property color headerColor:         "#37474f"
@@ -34,6 +33,13 @@ Item {
     property int selectedRow: -1
     property int hoveredRow: -1
     property int sortedColumn: -1
+
+    Connections {
+        target: universalTable.tableModel
+        function onResetSorting() {
+            universalTable.sortedColumn = -1
+        }
+    }
 
     ColumnLayout {
         anchors.fill: parent
@@ -87,11 +93,13 @@ Item {
                             anchors.fill: parent
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
+                            acceptedButtons: Qt.LeftButton | Qt.RightButton
                             onClicked: {
                                 universalTable.sortedColumn = index
                                 if (universalTable.onHeaderClicked) {
                                     universalTable.onHeaderClicked(index)
                                 }
+
                                 console.log("Header clicked:", index, modelData)
                             }
                         }
@@ -138,7 +146,6 @@ Item {
                 anchors.margins: 0
                 clip: true
                 model: universalTable.tableModel
-                reuseItems: false
                 boundsBehavior: Flickable.StopAtBounds
 
                 // Убираем полосы прокрутки по умолчанию
@@ -223,19 +230,9 @@ Item {
                     Text {
                         anchors.centerIn: parent
                         anchors.margins: 5
-                        text: {
-                            if (model && model.display !== undefined) {
-                                return model.display.toString()
-                            }
-                            return ""
-                        }
-
-                        property var style: universalTable.cellStyler ?
-                            universalTable.cellStyler(row, column, model && model.display ? model.display.toString() : "") :
-                            {color: universalTable.textColor, bold: false}
-
-                        color: style.color || universalTable.textColor
-                        font.bold: style.bold || false
+                        text: model.display ? model.display.toString() : ""
+                        color: model.statusColor || model.typeColor || universalTable.textColor
+                        font.bold: model.isBold || false
                         font.family: universalTable.fontFamily
                         font.pixelSize: universalTable.fontSize
                         elide: Text.ElideRight

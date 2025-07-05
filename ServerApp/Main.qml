@@ -46,6 +46,12 @@ ApplicationWindow {
 
             Button {
                 text: "Запустить сервер"
+                onClicked: serverDialog.open()
+                highlighted: true
+            }
+
+            Button {
+                text: "Запустить сервер"
                 onClicked: viewModel.startServer(AppEnums.TCP, 12345)
                 highlighted: true
             }
@@ -95,22 +101,6 @@ ApplicationWindow {
 
             Item { Layout.fillWidth: true }
 
-            Button {
-                text: "Удалить отключенных"
-                onClicked: viewModel.removeDisconnectedClients()
-                background: Rectangle {
-                    color: "#ff9800"
-                    radius: 3
-                    border.color: "#f57c00"
-                }
-                contentItem: Text {
-                    text: parent.text
-                    color: "white"
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                }
-            }
-
             // Отладочная кнопка
             Button {
                 text: "Debug"
@@ -159,6 +149,25 @@ ApplicationWindow {
                 SplitView.preferredWidth: 470
                 SplitView.minimumWidth: 320
 
+                Button {
+                    text: "Убрать отключенных"
+                    anchors.right: parent.right
+                    highlighted: true
+                    onClicked: viewModel.removeDisconnectedClients()
+                    background: Rectangle {
+                        color: parent.down ? "#546E7A" : (parent.hovered ? "#78909C" : "#607D8B")
+                        radius: 3
+                        border.color: "#455A64"
+                    }
+                    contentItem: Text {
+                        text: parent.text
+                        color: "white"
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                        font.pixelSize: 10
+                    }
+                }
+
                 UniversalTable {
                     id: clientTable
                     anchors.fill: parent
@@ -168,13 +177,6 @@ ApplicationWindow {
                     // Используем данные из модели
                     columnWidths: viewModel && viewModel.clientTableModel ? viewModel.clientTableModel.columnWidths : []
                     columnHeaders: viewModel && viewModel.clientTableModel ? viewModel.clientTableModel.columnHeaders : []
-
-                    Component.onCompleted: {
-                        console.log("Client table completed")
-                        console.log("tableModel:", tableModel)
-                        console.log("columnHeaders:", columnHeaders)
-                        console.log("columnWidths:", columnWidths)
-                    }
 
                     onCellDoubleClicked: function(row, model) {
                         console.log("Cell double clicked, row:", row)
@@ -188,29 +190,6 @@ ApplicationWindow {
                     onHeaderClicked: function(column) {
                         console.log("Header clicked, column:", column)
                         viewModel.sortClients(column)
-                    }
-
-                    // Кастомная функция для стилизации ячеек статуса
-                    cellStyler: function(row, column, value) {
-                        // Колонка статуса (индекс 2)
-                        if (column === 2) {
-                            if (value === AppEnums.statusToString(AppEnums.CONNECTED)) {
-                                return {color: "#4CAF50", bold: true}
-                            } else if (value === AppEnums.statusToString(AppEnums.AUTHORIZING)) {
-                                return {color: "#FF9800", bold: true}
-                            } else if (value === AppEnums.statusToString(AppEnums.DISCONNECTED)) {
-                                return {color: "#f44336", bold: true}
-                            }
-                        }
-                        // Колонка отправки (индекс 3)
-                        if (column === 3) {
-                            if (value === "Да") {
-                                return {color: "#4CAF50", bold: true}
-                            } else {
-                                return {color: "#f44336", bold: true}
-                            }
-                        }
-                        return {color: "#424242", bold: false}
                     }
                 }
             }
@@ -249,22 +228,6 @@ ApplicationWindow {
                             console.log("Data header clicked, column:", column)
                             viewModel.sortData(column)
                         }
-
-                        // Кастомная функция для стилизации ячеек типа сообщения
-                        cellStyler: function(row, column, value) {
-                            // Колонка типа (индекс 2)
-                            if (column === 2) {                               
-
-                                if (value === "NetworkMetrics") {
-                                    return {color: "#0891b2", bold: false}
-                                } else if (value === "DeviceStatus") {
-                                    return {color: "#2196F3", bold: false}
-                                } else if (value === "Log") {
-                                    return {color: "#8f4cf6", bold: false}
-                                }
-                            }
-                            return {color: "#424242", bold: false}
-                        }
                     }
                 }
 
@@ -291,8 +254,9 @@ ApplicationWindow {
                             Button {
                                 text: "Очистить"
                                 onClicked: viewModel.clearLog()
+                                highlighted: true
                                 background: Rectangle {
-                                    color: "#607D8B"
+                                    color: parent.down ? "#546E7A" : (parent.hovered ? "#78909C" : "#607D8B")
                                     radius: 3
                                     border.color: "#455A64"
                                 }

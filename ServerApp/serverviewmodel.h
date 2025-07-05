@@ -5,6 +5,7 @@
 #include <QVariant>
 #include <QVariantMap>
 #include <QVariantList>
+#include <QSortFilterProxyModel>
 
 #include "serverworker.h"
 #include "iserver.h"
@@ -13,22 +14,21 @@
 class ServerViewModel : public QObject
 {
     Q_OBJECT
-    Q_PROPERTY(TableModel* clientTableModel READ clientTableModel CONSTANT)
-    Q_PROPERTY(TableModel* dataTableModel READ dataTableModel CONSTANT)
+    Q_PROPERTY(ClientTableModel* clientTableModel READ clientTableModel CONSTANT)
+    Q_PROPERTY(DataTableModel* dataTableModel READ dataTableModel CONSTANT)
     Q_PROPERTY(QString logText READ logText NOTIFY logTextChanged)
 
-
     static constexpr int WORKER_THREAD_WAIT_TIMEOUT_MS  = 5000;     // Таймаут ожидания завершения потока
-    static constexpr int MAX_DATA_TABLE_ROWS            = 3000;     // Максимальное количество строк в таблице данных
-    static constexpr int DATA_TABLE_TRIM_LENGTH         = 1000;     // Чтобы не обрезать до нуля, оставляем небольшой буфер
+    static constexpr int MAX_DATA_TABLE_ROWS            = 5000;     // Максимальное количество строк в таблице данных
+    static constexpr int DATA_TABLE_TRIM_LENGTH         = 2000;     // Чтобы не обрезать до нуля, оставляем небольшой буфер
 
 public:
     explicit ServerViewModel(QObject *parent = nullptr);
     ~ServerViewModel();
 
     // Геттеры для QML
-    TableModel* clientTableModel() const;
-    TableModel* dataTableModel() const;
+    ClientTableModel* clientTableModel() const;
+    DataTableModel* dataTableModel() const;
     QString logText() const;
 
     // Методы, вызываемые из QML
@@ -46,8 +46,7 @@ public slots:
     // Слоты для обработки сигналов от рабочего потока
     void handleClientBatchUpdate(const QList<QVariantMap>& clientBatch);
     void handleDataBatchReceived(const QList<QVariantMap>& dataBatch);
-    void handleLogMessage(const QString& message);
-    void handleServerStarted();
+    void handleLogBatch(const QStringList& logBatch);
     void handleServerStopped();
 
 signals:
@@ -63,11 +62,10 @@ signals:
 
 private:
     void setupWorkerThread();
-    void updateClientInModel(const QVariantMap& clientData);
 
     // UI модели
-    TableModel* m_clientTableModel;
-    TableModel* m_dataTableModel;
+    ClientTableModel* m_clientTableModel;
+    DataTableModel* m_dataTableModel;
     QString m_logText;
 
     // Переменные для хранения порядка сортировки

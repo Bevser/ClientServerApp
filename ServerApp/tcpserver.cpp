@@ -15,14 +15,21 @@ int TcpServer::clientCount() const {
     return m_clients.size();
 }
 
+bool TcpServer::isListening() const {
+    return m_tcpServer->isListening();
+}
+
 void TcpServer::startServer(quint16 port) {
     if (m_tcpServer && m_tcpServer->isListening()) {
         emit logMessage("Сервер уже запущен.");
         return;
     }
 
-    m_tcpServer = new QTcpServer(this);
-    connect(m_tcpServer, &QTcpServer::newConnection, this, &TcpServer::handleNewConnection);
+    if (!m_tcpServer)
+    {
+        m_tcpServer = new QTcpServer(this);
+        connect(m_tcpServer, &QTcpServer::newConnection, this, &TcpServer::handleNewConnection);
+    }
 
     if (!m_tcpServer->listen(QHostAddress::Any, port)) {
         emit logMessage(QString("Ошибка запуска сервера: %1").arg(m_tcpServer->errorString()));
@@ -40,9 +47,9 @@ void TcpServer::stopServer() {
     }
 
     m_tcpServer->close();
-    m_tcpServer->deleteLater();
-    m_tcpServer = nullptr;
-
+    for (TcpClient* client : m_clients) {
+        client->disconnect();
+    }
     m_clients.clear();
 
     emit logMessage("Сервер остановлен.");

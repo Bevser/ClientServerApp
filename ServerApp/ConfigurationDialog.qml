@@ -114,7 +114,7 @@ Dialog {
                 }
 
                 Label {
-                    text: "Статус: " + (clientData ? AppEnums.statusToString(clientData.status) : "N/A")
+                    text: "Статус: " + (clientData ? AppEnums.clientStatusToString(clientData.status) : "N/A")
                     font.pixelSize: 12
                     color: isClientConnected ? "#4CAF50" : "#f44336"
                     font.bold: true

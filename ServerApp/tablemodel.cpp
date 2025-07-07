@@ -188,7 +188,7 @@ QVariant ClientTableModel::data(const QModelIndex &index, int role) const
     switch (role) {
     case Qt::DisplayRole: {
         if (key == Keys::STATUS) {
-            return AppEnums::statusToString(static_cast<AppEnums::ClientStatus>(value.toInt()));
+            return AppEnums::clientStatusToString(static_cast<AppEnums::ClientStatus>(value.toInt()));
         }
         if (key == Keys::ALLOW_SENDING) {
             return value.toBool() ? "Да" : "Нет";
@@ -199,9 +199,9 @@ QVariant ClientTableModel::data(const QModelIndex &index, int role) const
     case StatusColorRole: {
         if (key == Keys::STATUS) {
             auto status = static_cast<AppEnums::ClientStatus>(value.toInt());
-            if (status == AppEnums::CONNECTED) return QColor("#4CAF50");
-            if (status == AppEnums::AUTHORIZING) return QColor("#FF9800");
-            if (status == AppEnums::DISCONNECTED) return QColor("#f44336");
+            if (status == AppEnums::CONNECTED)      return QColor("#4CAF50");
+            if (status == AppEnums::AUTHORIZING)    return QColor("#FF9800");
+            if (status == AppEnums::DISCONNECTED)   return QColor("#f44336");
         }
         if (key == Keys::ALLOW_SENDING) {
             return value.toBool() ? QColor("#4CAF50") : QColor("#f44336");
@@ -259,9 +259,9 @@ QVariant DataTableModel::data(const QModelIndex &index, int role) const
     case TypeColorRole: {
         if (key == Keys::TYPE) {
             QString typeStr = value.toString();
-            if (typeStr == "NetworkMetrics") return QColor("#0891b2");
-            if (typeStr == "DeviceStatus") return QColor("#2196F3");
-            if (typeStr == "Log") return QColor("#8f4cf6");
+            if (typeStr == "NetworkMetrics")    return QColor("#0891b2");
+            if (typeStr == "DeviceStatus")      return QColor("#2196F3");
+            if (typeStr == "Log")               return QColor("#8f4cf6");
         }
         return QColor("#424242"); // Цвет по умолчанию
     }

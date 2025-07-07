@@ -5,6 +5,7 @@ ServerViewModel::ServerViewModel(QObject *parent)
 
     m_clientTableModel  = new ClientTableModel(this);
     m_dataTableModel    = new DataTableModel(this);
+    m_serverListModel   = new ServerListModel(this);
 
     // Настраиваем рабочий поток
     setupWorkerThread();
@@ -30,14 +31,16 @@ void ServerViewModel::setupWorkerThread() {
             this, &ServerViewModel::handleDataBatchReceived, Qt::QueuedConnection);
     connect(m_serverWorker, &ServerWorker::logBatchReady,
             this, &ServerViewModel::handleLogBatch, Qt::QueuedConnection);
-    connect(m_serverWorker, &ServerWorker::serverStopped,
-            this, &ServerViewModel::handleServerStopped, Qt::QueuedConnection);
+    connect(m_serverWorker, &ServerWorker::serverStatusUpdate,
+            this, &ServerViewModel::handleServerStatusUpdate, Qt::QueuedConnection);
 
     // Подключаем сигналы от UI к рабочему потоку
     connect(this, &ServerViewModel::startServerRequested,
             m_serverWorker, &ServerWorker::startServer, Qt::QueuedConnection);
     connect(this, &ServerViewModel::stopServerRequested,
             m_serverWorker, &ServerWorker::stopServer, Qt::QueuedConnection);
+    connect(this, &ServerViewModel::deleteServerRequested,
+            m_serverWorker, &ServerWorker::deleteServer, Qt::QueuedConnection);
     connect(this, &ServerViewModel::sendToAllRequested,
             m_serverWorker, &ServerWorker::sendToAllClients, Qt::QueuedConnection);
     connect(this, &ServerViewModel::updateClientConfigRequested,
@@ -51,6 +54,20 @@ void ServerViewModel::setupWorkerThread() {
     connect(m_workerThread, &QThread::finished, m_serverWorker, &QObject::deleteLater);
 
     m_workerThread->start();
+}
+
+void ServerViewModel::addServerToList(AppEnums::ServerType type, quint16 port) {
+    m_serverListModel->addServer(type, port);
+}
+
+void ServerViewModel::removeServerFromList(AppEnums::ServerType type, quint16 port) {
+    emit deleteServerRequested(type, port);
+    m_serverListModel->removeServer(type, port);
+}
+
+void ServerViewModel::handleServerStatusUpdate(AppEnums::ServerType type, quint16 port,
+                                               AppEnums::ServerStatus status, int connections) {
+    m_serverListModel->updateServerStatus(type, port, status, connections);
 }
 
 void ServerViewModel::startServer(AppEnums::ServerType type, quint16 port) {
@@ -72,6 +89,7 @@ void ServerViewModel::stopAllClients() {
 void ServerViewModel::handleDataBatchReceived(const QList<QVariantMap>& dataBatch) {
     if (m_dataTableModel) {
         m_dataTableModel->addRows(dataBatch);
+
         if (m_dataTableModel->rowCount() > MAX_DATA_TABLE_ROWS) {
             int rowsToRemove = m_dataTableModel->rowCount() - (MAX_DATA_TABLE_ROWS - DATA_TABLE_TRIM_LENGTH);
             if (rowsToRemove > 0) {
@@ -97,6 +115,10 @@ DataTableModel* ServerViewModel::dataTableModel() const {
     return m_dataTableModel;
 }
 
+ServerListModel* ServerViewModel::serverListModel() const {
+    return m_serverListModel;
+}
+
 QString ServerViewModel::logText() const {
     return m_logText;
 }
@@ -114,6 +136,10 @@ void ServerViewModel::sortData(int columnIndex) {
 void ServerViewModel::clearLog() {
     m_logText.clear();
     emit logTextChanged();
+}
+
+void ServerViewModel::clearData() {
+    m_dataTableModel->clear();
 }
 
 void ServerViewModel::handleLogBatch(const QStringList& logBatch) {
@@ -149,7 +175,6 @@ void ServerViewModel::handleClientBatchUpdate(const QList<QVariantMap>& clientBa
     for (int i = 0; i < m_clientTableModel->rowCount(); ++i) {
         QVariantMap existingClient = m_clientTableModel->getRowData(i);
         QString descriptor = existingClient.value(Keys::DESCRIPTOR).toString();
-
         // Проверяем, есть ли текущий клиент в пакете обновлений
         if (batchMap.contains(descriptor)) {
             // Клиент есть в пакете
@@ -178,4 +203,3 @@ void ServerViewModel::handleClientBatchUpdate(const QList<QVariantMap>& clientBa
     // 4. Атомарно обновляем модель новым списком данных
     m_clientTableModel->setData(finalDataList);
 }
-

@@ -19,6 +19,8 @@ void DataProcessing::handleClientConnected(IClient* client) {
     if (!client) return;
 
     quintptr descriptor = client->descriptor();
+    if (m_clients.contains(descriptor))
+        m_usedClientIds.remove(m_clients[descriptor].client->id());
     client->setId(QString::number(descriptor));
 
     ClientState state;
@@ -53,8 +55,12 @@ void DataProcessing::handleClientDisconnected(IClient* client) {
     if (!client) return;
 
     if (m_clients.contains(client->descriptor())) {
-        ClientState& state = m_clients[client->descriptor()];
-        state.status        = AppEnums::DISCONNECTED;
+        ClientState& state  = m_clients[client->descriptor()];
+        if (state.status == AppEnums::AUTHORIZING) {
+            state.status    = AppEnums::DELETED;
+        } else {
+            state.status    = AppEnums::DISCONNECTED;
+        }
         state.allowSending  = false;
 
         m_clientBatch.append(getClientDataMap(state));
@@ -91,8 +97,7 @@ void DataProcessing::removeDisconnectedClients() {
     emit logMessage(QString("Удалено %1 отключенных клиентов.").arg(count));
 }
 
-void DataProcessing::clearClients()
-{
+void DataProcessing::clearClients() {
     m_clients.clear();
     m_usedClientIds.clear();
 }

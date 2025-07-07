@@ -23,6 +23,13 @@ ApplicationWindow {
         }
     }
 
+    ServerManagementDialog {
+        id: serverDialog
+        anchors.centerIn: parent
+        // Ключевая привязка модели
+        model: viewModel.serverListModel
+    }
+
     // Отладочная информация
     Component.onCompleted: {
         console.log("Main window loaded")
@@ -45,20 +52,9 @@ ApplicationWindow {
             spacing: 10
 
             Button {
-                text: "Запустить сервер"
+                text: "Управление серверами"
                 onClicked: serverDialog.open()
                 highlighted: true
-            }
-
-            Button {
-                text: "Запустить сервер"
-                onClicked: viewModel.startServer(AppEnums.TCP, 12345)
-                highlighted: true
-            }
-
-            Button {
-                text: "Остановить сервер"
-                onClicked: viewModel.stopServer(AppEnums.TCP, 12345)
             }
 
             Rectangle {
@@ -207,6 +203,25 @@ ApplicationWindow {
                     SplitView.preferredHeight: 600
                     SplitView.minimumHeight: 200
 
+                    Button {
+                        text: "Очистить"
+                        anchors.right: parent.right
+                        highlighted: true
+                        onClicked: viewModel.clearData()
+                        background: Rectangle {
+                            color: parent.down ? "#546E7A" : (parent.hovered ? "#78909C" : "#607D8B")
+                            radius: 3
+                            border.color: "#455A64"
+                        }
+                        contentItem: Text {
+                            text: parent.text
+                            color: "white"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                            font.pixelSize: 10
+                        }
+                    }
+
                     UniversalTable {
                         id: dataTable
                         anchors.fill: parent
@@ -236,38 +251,33 @@ ApplicationWindow {
                     SplitView.preferredHeight: 200
                     SplitView.minimumHeight: 100
 
+                    Button {
+                        text: "Очистить"
+                        anchors.right: parent.right
+                        highlighted: true
+                        onClicked: viewModel.clearLog()
+                        background: Rectangle {
+                            color: parent.down ? "#546E7A" : (parent.hovered ? "#78909C" : "#607D8B")
+                            radius: 3
+                            border.color: "#455A64"
+                        }
+                        contentItem: Text {
+                            text: parent.text
+                            color: "white"
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                            font.pixelSize: 10
+                        }
+                    }
+
                     ColumnLayout {
                         anchors.fill: parent
                         spacing: 5
 
-                        RowLayout {
-                            Layout.fillWidth: true
-
-                            Label {
-                                text: "Лог"
-                                font.bold: true
-                                font.pixelSize: 14
-                            }
-
-                            Item { Layout.fillWidth: true }
-
-                            Button {
-                                text: "Очистить"
-                                onClicked: viewModel.clearLog()
-                                highlighted: true
-                                background: Rectangle {
-                                    color: parent.down ? "#546E7A" : (parent.hovered ? "#78909C" : "#607D8B")
-                                    radius: 3
-                                    border.color: "#455A64"
-                                }
-                                contentItem: Text {
-                                    text: parent.text
-                                    color: "white"
-                                    horizontalAlignment: Text.AlignHCenter
-                                    verticalAlignment: Text.AlignVCenter
-                                    font.pixelSize: 10
-                                }
-                            }
+                        Label {
+                            text: "Лог"
+                            font.bold: true
+                            font.pixelSize: 14
                         }
 
                         ScrollView {

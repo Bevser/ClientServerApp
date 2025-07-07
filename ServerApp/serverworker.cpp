@@ -30,9 +30,7 @@ void ServerWorker::handleBatchTimerTimeout() {
         if (!clientBatch.isEmpty()) {
             m_batchTimer->setInterval(BATCH_TIMEOUT_SLOW_MODE_MS);
             emit clientBatchReady(clientBatch);
-        }
-        else
-        {
+        } else { // Если нагрузка большая, то уменьшаем частоту обновления
             m_batchTimer->setInterval(BATCH_TIMEOUT_MS);
         }
 
@@ -40,6 +38,15 @@ void ServerWorker::handleBatchTimerTimeout() {
         if (!m_logBatch.isEmpty()) {
             emit logBatchReady(m_logBatch);
             m_logBatch.clear();
+        }
+
+        // Обновляем статусы серверов
+        for (auto it = m_servers.constBegin(); it != m_servers.constEnd(); ++it) {
+            if (it.value()->isListening()) {
+                const auto& key = it.key();
+                emit serverStatusUpdate(key.first, key.second,
+                                        AppEnums::ServerStatus::RUNNING, it.value()->clientCount());
+            }
         }
     }
 }
@@ -50,34 +57,56 @@ void ServerWorker::handleLogMessage(const QString &message) {
 }
 
 void ServerWorker::startServer(AppEnums::ServerType type, quint16 port) {
+    const auto key = qMakePair(type, port);
+
+    if (m_servers.contains(key)) {
+        m_servers[key]->startServer(port);
+        handleLogMessage(QString("Сервер перезапущен (%1:%2).")
+                             .arg(AppEnums::typeToString(type))
+                             .arg(port));
+        return;
+    }
+
     IServer* server = ServerFactory::createServer(type);
     if (!server) {
         handleLogMessage("Ошибка: не удалось создать сервер.");
+        emit serverStatusUpdate(type, port, AppEnums::ServerStatus::ERROR, 0);
         return;
     }
 
     m_dataProcessing->addServer(server);
-    m_servers[port] = server;
+    m_servers[key] = server;
+
     server->startServer(port);
-    m_batchTimer->start(BATCH_TIMEOUT_MS);
-    handleLogMessage("Сервер успешно запущен.");
-    emit serverStarted();
+    handleLogMessage(QString("Сервер запущен (%1:%2).")
+                         .arg(AppEnums::typeToString(type))
+                         .arg(port));
+    emit serverStatusUpdate(type, port, AppEnums::ServerStatus::RUNNING, 0);
+    if (!m_batchTimer->isActive()) {
+        m_batchTimer->start(BATCH_TIMEOUT_MS);
+    }
 }
 
 void ServerWorker::stopServer(AppEnums::ServerType type, quint16 port) {
-    IServer* server = m_servers[port];
+    const auto key = qMakePair(type, port);
 
-    if (server) {
+    if (m_servers.contains(key)) {
+        IServer* server = m_servers[key];
         server->stopServer();
-        m_dataProcessing->clearClients();
 
-        m_servers.remove(port);
-        delete server;
-        server = nullptr;
-        m_batchTimer->stop();
+        handleLogMessage(QString("Сервер на порту %1 остановлен.").arg(port));
+        emit serverStatusUpdate(type, port, AppEnums::ServerStatus::STOPPED, 0);
+    }
+}
 
-        handleLogMessage("Сервер остановлен.");
-        emit serverStopped();
+void ServerWorker::deleteServer(AppEnums::ServerType type, quint16 port)
+{
+    const auto key = qMakePair(type, port);
+
+    if (m_servers.contains(key)) {
+        IServer* server = m_servers.take(key);
+        removeDisconnectedClients();
+        server->deleteLater();
     }
 }
 

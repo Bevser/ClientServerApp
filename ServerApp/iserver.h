@@ -12,6 +12,7 @@ public:
     virtual ~IServer() = default;
 
     virtual int clientCount() const             = 0;
+    virtual bool isListening() const            = 0;
 
 public slots:
     virtual void startServer(quint16 port)      = 0;

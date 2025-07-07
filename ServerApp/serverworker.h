@@ -26,6 +26,7 @@ public:
 public slots:
     void startServer(AppEnums::ServerType type, quint16 port);
     void stopServer(AppEnums::ServerType type, quint16 port);
+    void deleteServer(AppEnums::ServerType type, quint16 port);
     void sendToAllClients(const QString &data);
     void updateClientConfiguration(const QVariantMap &config);
     void removeDisconnectedClients();
@@ -35,6 +36,7 @@ signals:
     // Сигналы для передачи в UI поток
     void serverStarted();
     void serverStopped();
+    void serverStatusUpdate(AppEnums::ServerType type, quint16 port, AppEnums::ServerStatus status, int connections);
     void clientBatchReady(const QList<QVariantMap> &clientBatch);
     void dataBatchReady(const QList<QVariantMap> &dataBatch);
     void logBatchReady(const QStringList &logBatch);
@@ -48,7 +50,7 @@ private:
     QStringList m_logBatch;
 
     DataProcessing* m_dataProcessing;
-    QHash<quint16, IServer*> m_servers;
+    QHash<QPair<AppEnums::ServerType, quint16>, IServer*> m_servers;
 };
 
 #endif // SERVERWORKER_H

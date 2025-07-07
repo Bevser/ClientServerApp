@@ -29,11 +29,11 @@ bool TcpClient::isConnected() const {
 }
 
 QString TcpClient::address() const {
-    return QHostAddress(m_socket->peerAddress().toIPv4Address()).toString();
+    return m_socket ? QHostAddress(m_socket->peerAddress().toIPv4Address()).toString() : "0";
 }
 
 quint16 TcpClient::port() const {
-    return m_socket->peerPort();
+    return m_socket ? m_socket->peerPort() : 0;
 }
 
 void TcpClient::setId(const QString &id){
@@ -45,7 +45,7 @@ QString TcpClient::id() const {
 }
 
 void TcpClient::connectToHost(const QString &host, quint16 port) {
-    if (m_socket->state() == QAbstractSocket::UnconnectedState) {
+    if (m_socket && m_socket->state() == QAbstractSocket::UnconnectedState) {
         m_socket->connectToHost(host, port);
     }
 }

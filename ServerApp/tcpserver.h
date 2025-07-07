@@ -21,6 +21,7 @@ public:
     ~TcpServer();
 
     int clientCount() const override;
+    bool isListening() const override;
 
 public slots:
     void startServer(quint16 port) override;

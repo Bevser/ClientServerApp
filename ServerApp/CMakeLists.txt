@@ -34,6 +34,8 @@ qt_add_qml_module(Server
         QML_FILES ConfigurationDialog.qml
         SOURCES serverworker.h serverworker.cpp
         SOURCES tablemodel.h tablemodel.cpp
+        QML_FILES ServerManagementDialog.qml
+        SOURCES serverlistmodel.h serverlistmodel.cpp
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.

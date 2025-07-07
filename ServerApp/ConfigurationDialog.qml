@@ -4,16 +4,58 @@ import QtQuick.Layouts
 import enums 1.0
 
 Dialog {
-    id: configDialog
-    title: "Конфигурация клиента"
-    modal: true
-    width: 450
+    id:     configDialog
+    title:  "Конфигурация клиента"
+    modal:  true
+    width:  450
     height: 550
+
+    // Темы и стили
+    readonly property QtObject theme: QtObject {
+        readonly property color toolButtonPressed:          "#d4d4d4"
+        readonly property color toolButtonHovered:          "#e8e8e8"
+        readonly property color toolButtonBorder:           "#c0c0c0"
+        readonly property color toolButtonBorderPressed:    "#a0a0a0"
+        readonly property color separatorColor:             "#d0d0d0"
+
+        readonly property color startButtonPressed:         "#c8e6c9"
+        readonly property color startButtonHovered:         "#e8f5e8"
+        readonly property color startButtonBorder:          "#81c784"
+        readonly property color startButtonBorderPressed:   "#4caf50"
+
+        readonly property color stopButtonPressed:          "#ffcdd2"
+        readonly property color stopButtonHovered:          "#ffebee"
+        readonly property color stopButtonBorder:           "#e57373"
+        readonly property color stopButtonBorderPressed:    "#f44336"
+
+        readonly property color clearButtonNormal:          "#607D8B"
+        readonly property color clearButtonHovered:         "#78909C"
+        readonly property color clearButtonPressed:         "#546E7A"
+        readonly property color clearButtonBorder:          "#455A64"
+
+        readonly property color logBackground:              "#fafafa"
+        readonly property color logBorder:                  "#ddd"
+        readonly property color logText:                    "#333"
+
+        readonly property color headerBackground:           "#f8f9fa"
+        readonly property color headerBorder:               "#e0e0e0"
+        readonly property color secondaryText:              "#666"
+        readonly property color connectedStatus:            "#4CAF50"
+        readonly property color disconnectedStatus:         "#f44336"
+        readonly property color fieldBackground:            "#ffffff"
+        readonly property color fieldBorder:                "#e0e0e0"
+        readonly property color readOnlyBackground:         "#fff3e0"
+
+        readonly property string monoFont:                  "Consolas, Monaco, monospace"
+        readonly property int toolButtonSize:               24
+        readonly property int smallFontSize:                10
+        readonly property int normalFontSize:               14
+    }
 
     property var clientData: null
     property bool isClientConnected: false
     property bool allowSending: false
-    property bool originalAllowSending: false  // Добавляем для отслеживания исходного значения
+    property bool originalAllowSending: false
 
     signal configurationAccepted(var message)
     signal sendingToggled(var data)
@@ -88,8 +130,8 @@ Dialog {
 
     header: Rectangle {
         height: 80
-        color: "#f8f9fa"
-        border.color: "#e0e0e0"
+        color: configDialog.theme.headerBackground
+        border.color: configDialog.theme.headerBorder
 
         RowLayout {
             anchors.fill: parent
@@ -104,19 +146,19 @@ Dialog {
                 Label {
                     text: "ID: " + (clientData ? clientData.id : "N/A")
                     font.bold: true
-                    font.pixelSize: 14
+                    font.pixelSize: configDialog.theme.normalFontSize
                 }
 
                 Label {
                     text: "Адрес: " + (clientData ? clientData.address : "N/A")
-                    font.pixelSize: 12
-                    color: "#666"
+                    font.pixelSize: configDialog.theme.smallFontSize + 2
+                    color: configDialog.theme.secondaryText
                 }
 
                 Label {
                     text: "Статус: " + (clientData ? AppEnums.clientStatusToString(clientData.status) : "N/A")
-                    font.pixelSize: 12
-                    color: isClientConnected ? "#4CAF50" : "#f44336"
+                    font.pixelSize: configDialog.theme.smallFontSize + 2
+                    color: isClientConnected ? configDialog.theme.connectedStatus : configDialog.theme.disconnectedStatus
                     font.bold: true
                 }
             }
@@ -130,6 +172,7 @@ Dialog {
         GroupBox {
             title: "Отправка данных"
             Layout.fillWidth: true
+            font.pixelSize: configDialog.theme.normalFontSize
 
             RowLayout {
                 anchors.fill: parent
@@ -137,8 +180,9 @@ Dialog {
 
                 Label {
                     text: allowSending ? "Разрешена" : "Запрещена"
-                    color: allowSending ? "#4CAF50" : "#f44336"
+                    color: allowSending ? configDialog.theme.connectedStatus : configDialog.theme.disconnectedStatus
                     font.bold: true
+                    font.pixelSize: configDialog.theme.normalFontSize
                 }
 
                 Item { Layout.fillWidth: true }
@@ -160,6 +204,7 @@ Dialog {
             title: "Параметры конфигурации"
             Layout.fillWidth: true
             Layout.fillHeight: true
+            font.pixelSize: configDialog.theme.normalFontSize
 
             ScrollView {
                 anchors.fill: parent
@@ -172,8 +217,8 @@ Dialog {
                     delegate: Rectangle {
                         width: ListView.view.width
                         height: 50
-                        color: model.isReadOnly ? "#fff3e0" : "#ffffff"
-                        border.color: "#e0e0e0"
+                        color: model.isReadOnly ? configDialog.theme.readOnlyBackground : configDialog.theme.fieldBackground
+                        border.color: configDialog.theme.fieldBorder
                         radius: 4
 
                         RowLayout {
@@ -185,6 +230,7 @@ Dialog {
                             Label {
                                 text: model.key || ""
                                 font.bold: true
+                                font.pixelSize: configDialog.theme.normalFontSize
                                 Layout.preferredWidth: 120
                                 Layout.alignment: Qt.AlignTop
                             }
@@ -197,7 +243,6 @@ Dialog {
                                     top: 1000
                                     decimals: 3
                                     notation: DoubleValidator.StandardNotation
-                                    locale: "en";
                                 }
                                 Layout.fillWidth: true
                                 text: model.value || ""
@@ -205,8 +250,7 @@ Dialog {
                                 enabled: isClientConnected && !model.isReadOnly
                                 readOnly: !isClientConnected || model.isReadOnly
                                 inputMethodHints: Qt.ImhDigitsOnly
-
-
+                                font.pixelSize: configDialog.theme.normalFontSize
 
                                 onTextChanged: {
                                     if (!model.isReadOnly && isClientConnected) {
@@ -224,6 +268,7 @@ Dialog {
                                 visible: !model.isReadOnly
                                 ToolTip.text: "Сбросить"
                                 ToolTip.visible: hovered
+                                font.pixelSize: configDialog.theme.normalFontSize
 
                                 onClicked: {
                                     if (model.originalValue !== undefined) {
@@ -244,11 +289,13 @@ Dialog {
             enabled: isClientConnected
             DialogButtonBox.buttonRole: DialogButtonBox.AcceptRole
             highlighted: true
+            font.pixelSize: configDialog.theme.normalFontSize
         }
 
         Button {
             text: "Отмена"
             DialogButtonBox.buttonRole: DialogButtonBox.RejectRole
+            font.pixelSize: configDialog.theme.normalFontSize
         }
 
         onAccepted: {

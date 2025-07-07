@@ -3,41 +3,63 @@ import QtQuick.Controls
 import QtQuick.Layouts
 
 Item {
-    id: universalTable
+    id: root
 
-    property string title: "Таблица"
-    property var tableModel: null
-    property var columnWidths: []  // Массив относительных ширин колонок
-    property var columnHeaders: [] // Массив заголовков колонок
+    // Публичные свойства
+    property string title:      "Таблица"
+    property var tableModel:    null
+    property var columnWidths:  []
+    property var columnHeaders: []
+
+    // Колбэки
     property var onCellClicked: null
     property var onCellDoubleClicked: null
     property var onHeaderClicked: null
 
-    // Настройки стилей
-    property color headerColor:         "#37474f"
-    property color headerHoverColor:    "#455a64"
-    property color headerBorderColor:   "#263238"
-    property color headerTextColor:     "white"
-    property color evenRowColor:        "#ffffff"
-    property color oddRowColor:         "#f8f9fa"
-    property color hoverRowColor:       "#f0f8f0"
-    property color selectedRowColor:    "#dcf0dc"
-    property color borderColor:         "#e0e0e0"
-    property color textColor:           "#424242"
-    property string fontFamily:         "Arial"
-    property int fontSize: 11
-    property int rowHeight: 35
-    property int headerHeight: 35
+    // Настройки стилей (сгруппированы)
+    readonly property QtObject theme: QtObject {
+        readonly property color headerColor:        "#37474f"
+        readonly property color headerHoverColor:   "#455a64"
+        readonly property color headerBorderColor:  "#263238"
+        readonly property color headerTextColor:    "white"
+
+        readonly property color evenRowColor:       "#ffffff"
+        readonly property color oddRowColor:        "#f8f9fa"
+        readonly property color hoverRowColor:      "#f0f8f0"
+        readonly property color selectedRowColor:   "#dcf0dc"
+
+        readonly property color borderColor:        "#e0e0e0"
+        readonly property color textColor:          "#424242"
+
+        readonly property string fontFamily:        "Arial"
+        readonly property int fontSize:             11
+        readonly property int rowHeight:            35
+        readonly property int headerHeight:         35
+    }
 
     // Состояние таблицы
     property int selectedRow: -1
     property int hoveredRow: -1
     property int sortedColumn: -1
 
+    // Внутренние свойства
+    readonly property bool hasHeaders: columnHeaders && columnHeaders.length > 0
+    readonly property int columnsCount: hasHeaders ? columnHeaders.length : 0
+    readonly property bool hasCustomWidths: columnWidths && columnWidths.length > 0
+
+    // Функции для вычисления ширины колонок
+    function getColumnWidth(index, totalWidth) {
+        if (!hasCustomWidths || index >= columnWidths.length) {
+            return totalWidth / Math.max(1, columnsCount)
+        }
+        return totalWidth * columnWidths[index]
+    }
+
+    // Соединения с моделью
     Connections {
-        target: universalTable.tableModel
+        target: tableModel
         function onResetSorting() {
-            universalTable.sortedColumn = -1
+            root.sortedColumn = -1
         }
     }
 
@@ -47,60 +69,49 @@ Item {
 
         // Заголовок таблицы
         Label {
-            text: universalTable.title
+            text: root.title
             font.bold: true
             font.pixelSize: 14
             Layout.alignment: Qt.AlignLeft
             Layout.bottomMargin: 5
+            visible: root.title !== ""
         }
 
         // Заголовок колонок
         Rectangle {
-            id: headerRow
+            id: headerContainer
             Layout.fillWidth: true
-            height: universalTable.headerHeight
-            color: universalTable.headerColor
-            border.color: universalTable.headerBorderColor
+            height: root.theme.headerHeight
+            color: root.theme.headerColor
+            border.color: root.theme.headerBorderColor
             border.width: 1
+            visible: root.hasHeaders
 
             Row {
-                id: headerRowContent
                 anchors.fill: parent
-                anchors.margins: 0
 
                 Repeater {
-                    id: headerRepeater
-                    model: universalTable.columnHeaders && universalTable.columnHeaders.length > 0 ? universalTable.columnHeaders : []
+                    model: root.columnHeaders
 
                     Rectangle {
                         id: headerCell
-                        width: {
-                            if (!universalTable.columnWidths || universalTable.columnWidths.length === 0) {
-                                return headerRow.width / Math.max(1, universalTable.columnHeaders.length)
-                            }
-                            if (index < universalTable.columnWidths.length) {
-                                return headerRow.width * universalTable.columnWidths[index]
-                            }
-                            return headerRow.width / Math.max(1, universalTable.columnHeaders.length)
-                        }
-                        height: universalTable.headerHeight
-                        color: headerMouseArea.containsMouse ? universalTable.headerHoverColor : universalTable.headerColor
+                        width: root.getColumnWidth(index, headerContainer.width)
+                        height: root.theme.headerHeight
+                        color: headerMouseArea.containsMouse ? root.theme.headerHoverColor : root.theme.headerColor
                         border.width: index > 0 ? 1 : 0
-                        border.color: universalTable.headerBorderColor
+                        border.color: root.theme.headerBorderColor
 
                         MouseArea {
                             id: headerMouseArea
                             anchors.fill: parent
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
-                            acceptedButtons: Qt.LeftButton | Qt.RightButton
-                            onClicked: {
-                                universalTable.sortedColumn = index
-                                if (universalTable.onHeaderClicked) {
-                                    universalTable.onHeaderClicked(index)
-                                }
 
-                                console.log("Header clicked:", index, modelData)
+                            onClicked: {
+                                root.sortedColumn = index
+                                if (root.onHeaderClicked) {
+                                    root.onHeaderClicked(index)
+                                }
                             }
                         }
 
@@ -110,10 +121,10 @@ Item {
 
                             Label {
                                 text: modelData || ""
-                                color: universalTable.headerTextColor
+                                color: root.theme.headerTextColor
                                 font.bold: true
-                                font.family: universalTable.fontFamily
-                                font.pixelSize: universalTable.fontSize + 1
+                                font.family: root.theme.fontFamily
+                                font.pixelSize: root.theme.fontSize + 1
                                 anchors.verticalCenter: parent.verticalCenter
                                 elide: Text.ElideRight
                             }
@@ -123,7 +134,7 @@ Item {
                                 color: "#90a4ae"
                                 font.pixelSize: 12
                                 anchors.verticalCenter: parent.verticalCenter
-                                visible: universalTable.sortedColumn === index
+                                visible: root.sortedColumn === index
                             }
                         }
                     }
@@ -136,105 +147,95 @@ Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
             color: "transparent"
-            border.color: universalTable.borderColor
+            border.color: root.theme.borderColor
             border.width: 1
 
-            // Таблица данных
             TableView {
                 id: tableView
                 anchors.fill: parent
-                anchors.margins: 0
                 clip: true
-                model: universalTable.tableModel
+                model: root.tableModel
                 boundsBehavior: Flickable.StopAtBounds
 
-                // Убираем полосы прокрутки по умолчанию
+                // Полосы прокрутки
                 ScrollBar.horizontal: ScrollBar {
-                    id: hbar
-                    visible: tableView.contentWidth > tableView.width
+                    policy: tableView.contentWidth > tableView.width ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff
                 }
                 ScrollBar.vertical: ScrollBar {
-                    id: vbar
-                    visible: tableView.contentHeight > tableView.height
+                    policy: tableView.contentHeight > tableView.height ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff
                 }
 
                 columnWidthProvider: function (column) {
-                    if (!universalTable.columnWidths || universalTable.columnWidths.length === 0) {
-                        return width / Math.max(1, universalTable.columnHeaders.length)
-                    }
-                    if (column < universalTable.columnWidths.length) {
-                        return width * universalTable.columnWidths[column]
-                    }
-                    return width / Math.max(1, universalTable.columnHeaders.length)
+                    return root.getColumnWidth(column, width)
                 }
 
                 rowHeightProvider: function (row) {
-                    return universalTable.rowHeight
+                    return root.theme.rowHeight
                 }
 
                 delegate: Rectangle {
                     id: cellDelegate
                     implicitWidth: 100
-                    implicitHeight: universalTable.rowHeight
+                    implicitHeight: root.theme.rowHeight
 
-                    color: {
-                        if (row === universalTable.selectedRow) {
-                            return universalTable.selectedRowColor
-                        }
-                        if (row === universalTable.hoveredRow) {
-                            return universalTable.hoverRowColor
-                        }
-                        return row % 2 === 0 ? universalTable.evenRowColor : universalTable.oddRowColor
+                    // Вычисление цвета
+                    readonly property color cellColor: {
+                        if (row === root.selectedRow) return root.theme.selectedRowColor
+                        if (row === root.hoveredRow) return root.theme.hoverRowColor
+                        return row % 2 === 0 ? root.theme.evenRowColor : root.theme.oddRowColor
                     }
 
-                    border.color: universalTable.borderColor
+                    color: cellColor
+                    border.color: root.theme.borderColor
                     border.width: 0.5
 
                     MouseArea {
                         anchors.fill: parent
                         hoverEnabled: true
 
-                        // Используем Timer для задержки сброса hover
+                        // Timer для корректного управления hover при быстром перемещении мыши
                         Timer {
-                            id: hoverTimer
+                            id: hoverResetTimer
                             interval: 50
                             onTriggered: {
-                                if (universalTable.hoveredRow === row) {
-                                    universalTable.hoveredRow = -1
+                                if (root.hoveredRow === row) {
+                                    root.hoveredRow = -1
                                 }
                             }
                         }
 
                         onEntered: {
-                            hoverTimer.stop()
-                            universalTable.hoveredRow = row
+                            hoverResetTimer.stop()
+                            root.hoveredRow = row
                         }
 
                         onExited: {
-                            hoverTimer.start()
+                            // Используем Timer для предотвращения мерцания при переходе между ячейками
+                            hoverResetTimer.start()
                         }
 
                         onClicked: {
-                            universalTable.selectedRow = row
-                            if (universalTable.onCellClicked) {
-                                universalTable.onCellClicked(row, column, model)
+                            root.selectedRow = row
+                            if (root.onCellClicked) {
+                                root.onCellClicked(row, column, model)
                             }
                         }
 
                         onDoubleClicked: {
-                            if (universalTable.onCellDoubleClicked) {
-                                universalTable.onCellDoubleClicked(row, model)
+                            if (root.onCellDoubleClicked) {
+                                root.onCellDoubleClicked(row, model)
                             }
                         }
                     }
+
                     Text {
                         anchors.centerIn: parent
                         anchors.margins: 5
                         text: model.display ? model.display.toString() : ""
-                        color: model.statusColor || model.typeColor || universalTable.textColor
+                        color: model.statusColor || model.typeColor || root.theme.textColor
                         font.bold: model.isBold || false
-                        font.family: universalTable.fontFamily
-                        font.pixelSize: universalTable.fontSize
+                        font.family: root.theme.fontFamily
+                        font.pixelSize: root.theme.fontSize
                         elide: Text.ElideRight
                         width: parent.width - 10
                         horizontalAlignment: Text.AlignHCenter
@@ -244,25 +245,5 @@ Item {
                 }
             }
         }
-    }
-
-    // Отладочная информация
-    Component.onCompleted: {
-        console.log("UniversalTable initialized:")
-        console.log("- columnHeaders:", JSON.stringify(columnHeaders))
-        console.log("- columnWidths:", JSON.stringify(columnWidths))
-        console.log("- tableModel:", tableModel)
-    }
-
-    onColumnHeadersChanged: {
-        console.log("Column headers changed:", JSON.stringify(columnHeaders))
-    }
-
-    onColumnWidthsChanged: {
-        console.log("Column widths changed:", JSON.stringify(columnWidths))
-    }
-
-    onTableModelChanged: {
-        console.log("Table model changed:", tableModel)
     }
 }

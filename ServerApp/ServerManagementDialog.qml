@@ -4,13 +4,77 @@ import QtQuick.Layouts
 import enums 1.0
 
 Dialog {
-    id: serverDialog
-    title: "Управление серверами"
-    modal: true
-    width: 650
+    id:     serverDialog
+    title:  "Управление серверами"
+    modal:  true
+    width:  650
     height: 500
     anchors.centerIn: parent
     standardButtons: Dialog.Close
+
+    // Темы и стили
+    readonly property QtObject theme: QtObject {
+        readonly property color toolButtonPressed:          "#d4d4d4"
+        readonly property color toolButtonHovered:          "#e8e8e8"
+        readonly property color toolButtonBorder:           "#c0c0c0"
+        readonly property color toolButtonBorderPressed:    "#a0a0a0"
+        readonly property color separatorColor:             "#d0d0d0"
+
+        readonly property color startButtonPressed:         "#c8e6c9"
+        readonly property color startButtonHovered:         "#e8f5e8"
+        readonly property color startButtonBorder:          "#81c784"
+        readonly property color startButtonBorderPressed:   "#4caf50"
+
+        readonly property color stopButtonPressed:          "#ffcdd2"
+        readonly property color stopButtonHovered:          "#ffebee"
+        readonly property color stopButtonBorder:           "#e57373"
+        readonly property color stopButtonBorderPressed:    "#f44336"
+
+        readonly property color clearButtonNormal:          "#607D8B"
+        readonly property color clearButtonHovered:         "#78909C"
+        readonly property color clearButtonPressed:         "#546E7A"
+        readonly property color clearButtonBorder:          "#455A64"
+
+        readonly property color logBackground:              "#fafafa"
+        readonly property color logBorder:                  "#ddd"
+        readonly property color logText:                    "#333"
+
+        // Дополнительные цвета для диалога
+        readonly property color headerBackground:           "#f8f9fa"
+        readonly property color headerBorder:               "#e0e0e0"
+        readonly property color secondaryText:              "#666"
+        readonly property color connectedStatus:            "#4CAF50"
+        readonly property color disconnectedStatus:         "#f44336"
+        readonly property color fieldBackground:            "#ffffff"
+        readonly property color fieldBorder:                "#e0e0e0"
+        readonly property color readOnlyBackground:         "#fff3e0"
+        readonly property color placeholderText:            "#999"
+
+        // Цвета для кнопок сервера
+        readonly property color startButtonNormal:          "#66BB6A"
+        readonly property color startButtonHover:           "#4CAF50"
+        readonly property color startButtonPress:           "#388E3C"
+        readonly property color startButtonBorderColor:     "#388E3C"
+
+        readonly property color stopButtonNormal:           "#ff5722"
+        readonly property color stopButtonHover:            "#f44336"
+        readonly property color stopButtonPress:            "#d32f2f"
+        readonly property color stopButtonBorderColor:      "#d32f2f"
+
+        readonly property color deleteButtonNormal:         "#A1887F"
+        readonly property color deleteButtonHover:          "#8D6E63"
+        readonly property color deleteButtonPress:          "#795548"
+        readonly property color deleteButtonBorderColor:    "#5D4037"
+
+        readonly property color disabledButtonBackground:   "#e0e0e0"
+        readonly property color disabledButtonBorder:       "#bdbdbd"
+        readonly property color disabledButtonText:         "#9e9e9e"
+
+        readonly property string monoFont:                  "Consolas, Monaco, monospace"
+        readonly property int toolButtonSize:               24
+        readonly property int smallFontSize:                10
+        readonly property int normalFontSize:               14
+    }
 
     property alias model: serverListView.model
 
@@ -21,12 +85,16 @@ Dialog {
         GroupBox {
             title: "Добавить новый сервер"
             Layout.fillWidth: true
+            font.pixelSize: serverDialog.theme.normalFontSize
 
             RowLayout {
                 anchors.fill: parent
                 spacing: 10
 
-                Label { text: "Тип:" }
+                Label {
+                    text: "Тип:"
+                    font.pixelSize: serverDialog.theme.normalFontSize
+                }
                 ComboBox {
                     id: serverTypeCombo
                     model: [
@@ -39,9 +107,13 @@ Dialog {
                     valueRole: "value"
                     currentIndex: 0
                     implicitWidth: 140
+                    font.pixelSize: serverDialog.theme.normalFontSize
                 }
 
-                Label { text: "Порт:" }
+                Label {
+                    text: "Порт:"
+                    font.pixelSize: serverDialog.theme.normalFontSize
+                }
                 SpinBox {
                     id: portSpinBox
                     editable: true
@@ -49,12 +121,14 @@ Dialog {
                     to: 65535
                     value: 12345
                     implicitWidth: 150
+                    font.pixelSize: serverDialog.theme.normalFontSize
                 }
 
                 Button {
                     text: "Добавить"
                     highlighted: true
                     enabled: serverDialog.model ? serverDialog.model.canAddServer(serverTypeCombo.currentValue, portSpinBox.value) : false
+                    font.pixelSize: serverDialog.theme.normalFontSize
                     onClicked: {
                         viewModel.addServerToList(serverTypeCombo.currentValue, portSpinBox.value)
                         portSpinBox.value++
@@ -68,6 +142,7 @@ Dialog {
             title: "Конфигурация серверов"
             Layout.fillWidth: true
             Layout.fillHeight: true
+            font.pixelSize: serverDialog.theme.normalFontSize
 
             ScrollView {
                 anchors.fill: parent
@@ -82,8 +157,8 @@ Dialog {
                         id: serverItem
                         width: ListView.view.width
                         height: 80
-                        color: "#ffffff"
-                        border.color: "#e0e0e0"
+                        color: serverDialog.theme.fieldBackground
+                        border.color: serverDialog.theme.fieldBorder
                         border.width: 1
                         radius: 5
 
@@ -109,18 +184,18 @@ Dialog {
                                 Label {
                                     text: model.serverInfo
                                     font.bold: true
-                                    font.pixelSize: 14
+                                    font.pixelSize: serverDialog.theme.normalFontSize
                                 }
 
                                 Label {
                                     text: "Порт: " + model.port
-                                    font.pixelSize: 12
-                                    color: "#666"
+                                    font.pixelSize: serverDialog.theme.smallFontSize + 2
+                                    color: serverDialog.theme.secondaryText
                                 }
 
                                 Label {
                                     text: "Статус: " + model.statusText
-                                    font.pixelSize: 12
+                                    font.pixelSize: serverDialog.theme.smallFontSize + 2
                                     color: model.statusColor
                                 }
                             }
@@ -138,26 +213,28 @@ Dialog {
 
                                     background: Rectangle {
                                         color: {
-                                            if (!parent.enabled) return "#e0e0e0"
+                                            if (!parent.enabled) return serverDialog.theme.disabledButtonBackground
                                             if (model.canStop) {
-                                                return parent.down ? "#d32f2f" : (parent.hovered ? "#f44336" : "#ff5722")
+                                                return parent.down ? serverDialog.theme.stopButtonPress :
+                                                      (parent.hovered ? serverDialog.theme.stopButtonHover : serverDialog.theme.stopButtonNormal)
                                             } else {
-                                                return parent.down ? "#388E3C" : (parent.hovered ? "#4CAF50" : "#66BB6A")
+                                                return parent.down ? serverDialog.theme.startButtonPress :
+                                                      (parent.hovered ? serverDialog.theme.startButtonHover : serverDialog.theme.startButtonNormal)
                                             }
                                         }
                                         radius: 3
                                         border.color: {
-                                            if (!parent.enabled) return "#bdbdbd"
-                                            return model.canStop ? "#d32f2f" : "#388E3C"
+                                            if (!parent.enabled) return serverDialog.theme.disabledButtonBorder
+                                            return model.canStop ? serverDialog.theme.stopButtonBorderColor : serverDialog.theme.startButtonBorderColor
                                         }
                                     }
 
                                     contentItem: Text {
                                         text: parent.text
-                                        color: parent.enabled ? "white" : "#9e9e9e"
+                                        color: parent.enabled ? "white" : serverDialog.theme.disabledButtonText
                                         horizontalAlignment: Text.AlignHCenter
                                         verticalAlignment: Text.AlignVCenter
-                                        font.pixelSize: 11
+                                        font.pixelSize: serverDialog.theme.smallFontSize + 1
                                     }
 
                                     onClicked: {
@@ -176,18 +253,19 @@ Dialog {
 
                                     background: Rectangle {
                                         color: parent.enabled ?
-                                               (parent.down ? "#795548" : (parent.hovered ? "#8D6E63" : "#A1887F")) :
-                                               "#e0e0e0"
+                                               (parent.down ? serverDialog.theme.deleteButtonPress :
+                                               (parent.hovered ? serverDialog.theme.deleteButtonHover : serverDialog.theme.deleteButtonNormal)) :
+                                               serverDialog.theme.disabledButtonBackground
                                         radius: 3
-                                        border.color: parent.enabled ? "#5D4037" : "#bdbdbd"
+                                        border.color: parent.enabled ? serverDialog.theme.deleteButtonBorderColor : serverDialog.theme.disabledButtonBorder
                                     }
 
                                     contentItem: Text {
                                         text: parent.text
-                                        color: parent.enabled ? "white" : "#9e9e9e"
+                                        color: parent.enabled ? "white" : serverDialog.theme.disabledButtonText
                                         horizontalAlignment: Text.AlignHCenter
                                         verticalAlignment: Text.AlignVCenter
-                                        font.pixelSize: 11
+                                        font.pixelSize: serverDialog.theme.smallFontSize + 1
                                     }
 
                                     onClicked: {
@@ -202,8 +280,8 @@ Dialog {
                     Label {
                         anchors.centerIn: parent
                         text: "Нет добавленных серверов"
-                        color: "#999"
-                        font.pixelSize: 14
+                        color: serverDialog.theme.placeholderText
+                        font.pixelSize: serverDialog.theme.normalFontSize
                         visible: serverListView.model ? serverListView.model.count === 0 : true
                     }
                 }

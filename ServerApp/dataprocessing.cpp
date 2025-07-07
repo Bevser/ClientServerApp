@@ -94,7 +94,7 @@ void DataProcessing::removeDisconnectedClients() {
         }
     }
 
-    emit logMessage(QString("Удалено %1 отключенных клиентов.").arg(count));
+    if(count) emit logMessage(QString("Удалено %1 отключенных клиентов.").arg(count));
 }
 
 void DataProcessing::clearClients() {

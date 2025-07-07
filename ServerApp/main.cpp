@@ -8,6 +8,7 @@
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
+    app.setWindowIcon(QIcon(":/resource/icon.ico"));
 
     QQuickWindow::setGraphicsApi(QSGRendererInterface::Software);
 

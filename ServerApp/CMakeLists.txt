@@ -8,6 +8,8 @@ find_package(Qt6 REQUIRED COMPONENTS Core Network Qml Quick QuickControls2)
 
 qt_standard_project_setup(REQUIRES 6.5)
 
+set(CMAKE_AUTORCC ON)
+
 qt_add_executable(Server
     main.cpp
     tcpserver.cpp
@@ -36,6 +38,7 @@ qt_add_qml_module(Server
         SOURCES tablemodel.h tablemodel.cpp
         QML_FILES ServerManagementDialog.qml
         SOURCES serverlistmodel.h serverlistmodel.cpp
+        RESOURCES resource.qrc
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.

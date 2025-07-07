@@ -5,39 +5,140 @@ import enums 1.0
 
 ApplicationWindow {
     id: root
-    width: 1280
-    height: 800
-    minimumHeight: 600
-    minimumWidth: 800
-    visible: true
-    title: "Сервер управления"
-    color: "#f0f0f0"
+    width:          1280
+    height:         800
+    minimumHeight:  600
+    minimumWidth:   800
+    visible:        true
+    title:          "Базовая станция"
+    color:          "#f0f0f0"
 
-    // Диалог конфигурации
+    // Темы и стили
+    readonly property QtObject theme: QtObject {
+        readonly property color toolButtonPressed:          "#d4d4d4"
+        readonly property color toolButtonHovered:          "#e8e8e8"
+        readonly property color toolButtonBorder:           "#c0c0c0"
+        readonly property color toolButtonBorderPressed:    "#a0a0a0"
+        readonly property color separatorColor:             "#d0d0d0"
+
+        readonly property color startButtonPressed:         "#c8e6c9"
+        readonly property color startButtonHovered:         "#e8f5e8"
+        readonly property color startButtonBorder:          "#81c784"
+        readonly property color startButtonBorderPressed:   "#4caf50"
+
+        readonly property color stopButtonPressed:          "#ffcdd2"
+        readonly property color stopButtonHovered:          "#ffebee"
+        readonly property color stopButtonBorder:           "#e57373"
+        readonly property color stopButtonBorderPressed:    "#f44336"
+
+        readonly property color clearButtonNormal:          "#607D8B"
+        readonly property color clearButtonHovered:         "#78909C"
+        readonly property color clearButtonPressed:         "#546E7A"
+        readonly property color clearButtonBorder:          "#455A64"
+
+        readonly property color logBackground:              "#fafafa"
+        readonly property color logBorder:                  "#ddd"
+        readonly property color logText:                    "#333"
+
+        readonly property string monoFont:                  "Consolas, Monaco, monospace"
+        readonly property int toolButtonSize:               24
+        readonly property int smallFontSize:                10
+        readonly property int normalFontSize:               14
+    }
+
+    // Проверка доступности viewModel
+    readonly property bool hasViewModel: viewModel !== null && viewModel !== undefined
+    readonly property bool hasClientModel: hasViewModel && viewModel.clientTableModel !== null
+    readonly property bool hasDataModel: hasViewModel && viewModel.dataTableModel !== null
+
+    // Диалоги
     ConfigurationDialog {
         id: configDialog
         anchors.centerIn: parent
-
         onConfigurationAccepted: function(message) {
-            viewModel.updateClientConfiguration(message)
+            if (root.hasViewModel) {
+                viewModel.updateClientConfiguration(message)
+            }
         }
     }
 
     ServerManagementDialog {
         id: serverDialog
         anchors.centerIn: parent
-        // Ключевая привязка модели
-        model: viewModel.serverListModel
+        model: root.hasViewModel ? viewModel.serverListModel : null
     }
 
-    // Отладочная информация
-    Component.onCompleted: {
-        console.log("Main window loaded")
-        console.log("viewModel:", viewModel)
-        if (viewModel && viewModel.clientTableModel) {
-            console.log("clientTableModel:", viewModel.clientTableModel)
-            console.log("clientTableModel.columnHeaders:", viewModel.clientTableModel.columnHeaders)
-            console.log("clientTableModel.columnWidths:", viewModel.clientTableModel.columnWidths)
+    // Компоненты для переиспользования
+    Component {
+        id: clearButtonComponent
+        Button {
+            property string buttonText: "Очистить"
+            property var clickHandler: null
+
+            text: buttonText
+            highlighted: true
+            onClicked: if (clickHandler) clickHandler()
+
+            background: Rectangle {
+                color: parent.down ? root.theme.clearButtonPressed :
+                      (parent.hovered ? root.theme.clearButtonHovered : root.theme.clearButtonNormal)
+                radius: 3
+                border.color: root.theme.clearButtonBorder
+            }
+
+            contentItem: Text {
+                text: parent.text
+                color: "white"
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+                font.pixelSize: root.theme.smallFontSize
+            }
+        }
+    }
+
+    Component {
+        id: toolButtonComponent
+        ToolButton {
+            property string iconPath: ""
+            property string tooltipText: ""
+            property var clickHandler: null
+            property string buttonType: "normal" // normal, start, stop
+
+            icon.width: root.theme.toolButtonSize
+            icon.height: root.theme.toolButtonSize
+            icon.source: iconPath
+            display: AbstractButton.IconOnly
+            onClicked: if (clickHandler) clickHandler()
+
+            ToolTip.visible: hovered
+            ToolTip.text: tooltipText
+
+            background: Rectangle {
+                color: {
+                    if (buttonType === "start") {
+                        return parent.pressed ? root.theme.startButtonPressed :
+                              (parent.hovered ? root.theme.startButtonHovered : "transparent")
+                    } else if (buttonType === "stop") {
+                        return parent.pressed ? root.theme.stopButtonPressed :
+                              (parent.hovered ? root.theme.stopButtonHovered : "transparent")
+                    }
+                    return parent.pressed ? root.theme.toolButtonPressed :
+                          (parent.hovered ? root.theme.toolButtonHovered : "transparent")
+                }
+                radius: 4
+                border.color: {
+                    if (buttonType === "start") {
+                        return parent.pressed ? root.theme.startButtonBorderPressed :
+                              (parent.hovered ? root.theme.startButtonBorder : "transparent")
+                    } else if (buttonType === "stop") {
+                        return parent.pressed ? root.theme.stopButtonBorderPressed :
+                              (parent.hovered ? root.theme.stopButtonBorder : "transparent")
+                    }
+                    return parent.pressed ? root.theme.toolButtonBorderPressed :
+                          (parent.hovered ? root.theme.toolButtonBorder : "transparent")
+                }
+                border.width: 1
+            }
         }
     }
 
@@ -47,94 +148,67 @@ ApplicationWindow {
         spacing: 10
 
         // Панель управления
-        RowLayout {
+        ToolBar {
+            id: toolBar
             Layout.fillWidth: true
-            spacing: 10
 
-            Button {
-                text: "Управление серверами"
-                onClicked: serverDialog.open()
-                highlighted: true
-            }
+            RowLayout {
+                anchors.fill: parent
+                anchors.margins: 4
+                spacing: 4
 
-            Rectangle {
-                width: 2
-                height: parent.height * 0.6
-                color: "#ccc"
-            }
-
-            Button {
-                text: "Старт всем клиентам"
-                onClicked: viewModel.startAllClients()
-                background: Rectangle {
-                    color: "#4CAF50"
-                    radius: 3
-                    border.color: "#388E3C"
+                // Кнопка управления серверами
+                Loader {
+                    sourceComponent: toolButtonComponent
+                    onLoaded: {
+                        item.iconPath = "qrc:/resource/settings.png"
+                        item.tooltipText = "Менеджер серверов"
+                        item.clickHandler = function() { serverDialog.open() }
+                    }
                 }
-                contentItem: Text {
-                    text: parent.text
-                    color: "white"
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                }
-            }
 
-            Button {
-                text: "Стоп всем клиентам"
-                onClicked: viewModel.stopAllClients()
-                background: Rectangle {
-                    color: "#f44336"
-                    radius: 3
-                    border.color: "#d32f2f"
+                // Разделитель
+                Rectangle {
+                    width: 1
+                    height: root.theme.toolButtonSize
+                    color: root.theme.separatorColor
+                    Layout.alignment: Qt.AlignVCenter
                 }
-                contentItem: Text {
-                    text: parent.text
-                    color: "white"
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                }
-            }
 
-            Item { Layout.fillWidth: true }
-
-            // Отладочная кнопка
-            Button {
-                text: "Debug"
-                visible: false
-                onClicked: {
-                    console.log("=== DEBUG INFO ===")
-                    console.log("viewModel:", viewModel)
-                    if (viewModel) {
-                        console.log("clientTableModel:", viewModel.clientTableModel)
-                        if (viewModel.clientTableModel) {
-                            console.log("columnHeaders:", viewModel.clientTableModel.columnHeaders)
-                            console.log("columnWidths:", viewModel.clientTableModel.columnWidths)
-                            console.log("rowCount:", viewModel.clientTableModel.rowCount())
-                        }
-                        console.log("dataTableModel:", viewModel.dataTableModel)
-                        if (viewModel.dataTableModel) {
-                            console.log("data columnHeaders:", viewModel.dataTableModel.columnHeaders)
-                            console.log("data columnWidths:", viewModel.dataTableModel.columnWidths)
-                            console.log("data rowCount:", viewModel.dataTableModel.rowCount())
+                // Кнопка запуска всех клиентов
+                Loader {
+                    sourceComponent: toolButtonComponent
+                    onLoaded: {
+                        item.iconPath = "qrc:/resource/start.png"
+                        item.tooltipText = "Запустить всех клиентов"
+                        item.buttonType = "start"
+                        item.clickHandler = function() {
+                            if (root.hasViewModel) viewModel.startAllClients()
                         }
                     }
                 }
-                background: Rectangle {
-                    color: "#9C27B0"
-                    radius: 3
-                    border.color: "#7B1FA2"
+
+                // Кнопка остановки всех клиентов
+                Loader {
+                    sourceComponent: toolButtonComponent
+                    onLoaded: {
+                        item.iconPath = "qrc:/resource/stop.png"
+                        item.tooltipText = "Остановить всех клиентов"
+                        item.buttonType = "stop"
+                        item.clickHandler = function() {
+                            if (root.hasViewModel) viewModel.stopAllClients()
+                        }
+                    }
                 }
-                contentItem: Text {
-                    text: parent.text
-                    color: "white"
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                    font.pixelSize: 10
+
+                // Заполнитель
+                Item {
+                    Layout.fillWidth: true
                 }
             }
         }
 
-        // Основная область (клиенты + данные)
+        // Основная область
         SplitView {
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -145,22 +219,14 @@ ApplicationWindow {
                 SplitView.preferredWidth: 470
                 SplitView.minimumWidth: 320
 
-                Button {
-                    text: "Убрать отключенных"
+                Loader {
+                    sourceComponent: clearButtonComponent
                     anchors.right: parent.right
-                    highlighted: true
-                    onClicked: viewModel.removeDisconnectedClients()
-                    background: Rectangle {
-                        color: parent.down ? "#546E7A" : (parent.hovered ? "#78909C" : "#607D8B")
-                        radius: 3
-                        border.color: "#455A64"
-                    }
-                    contentItem: Text {
-                        text: parent.text
-                        color: "white"
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                        font.pixelSize: 10
+                    onLoaded: {
+                        item.buttonText = "Убрать отключенных"
+                        item.clickHandler = function() {
+                            if (root.hasViewModel) viewModel.removeDisconnectedClients()
+                        }
                     }
                 }
 
@@ -168,24 +234,22 @@ ApplicationWindow {
                     id: clientTable
                     anchors.fill: parent
                     title: "Клиенты"
-                    tableModel: viewModel ? viewModel.clientTableModel : null
-
-                    // Используем данные из модели
-                    columnWidths: viewModel && viewModel.clientTableModel ? viewModel.clientTableModel.columnWidths : []
-                    columnHeaders: viewModel && viewModel.clientTableModel ? viewModel.clientTableModel.columnHeaders : []
+                    tableModel: root.hasClientModel ? viewModel.clientTableModel : null
+                    columnWidths: root.hasClientModel ? viewModel.clientTableModel.columnWidths : []
+                    columnHeaders: root.hasClientModel ? viewModel.clientTableModel.columnHeaders : []
 
                     onCellDoubleClicked: function(row, model) {
-                        console.log("Cell double clicked, row:", row)
+                        if (!root.hasClientModel) return
                         let rowData = viewModel.clientTableModel.getRowData(row)
-                        console.log("Row data:", JSON.stringify(rowData))
                         if (rowData) {
                             configDialog.openWithData(rowData)
                         }
                     }
 
                     onHeaderClicked: function(column) {
-                        console.log("Header clicked, column:", column)
-                        viewModel.sortClients(column)
+                        if (root.hasViewModel) {
+                            viewModel.sortClients(column)
+                        }
                     }
                 }
             }
@@ -203,22 +267,13 @@ ApplicationWindow {
                     SplitView.preferredHeight: 600
                     SplitView.minimumHeight: 200
 
-                    Button {
-                        text: "Очистить"
+                    Loader {
+                        sourceComponent: clearButtonComponent
                         anchors.right: parent.right
-                        highlighted: true
-                        onClicked: viewModel.clearData()
-                        background: Rectangle {
-                            color: parent.down ? "#546E7A" : (parent.hovered ? "#78909C" : "#607D8B")
-                            radius: 3
-                            border.color: "#455A64"
-                        }
-                        contentItem: Text {
-                            text: parent.text
-                            color: "white"
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                            font.pixelSize: 10
+                        onLoaded: {
+                            item.clickHandler = function() {
+                                if (root.hasViewModel) viewModel.clearData()
+                            }
                         }
                     }
 
@@ -226,22 +281,14 @@ ApplicationWindow {
                         id: dataTable
                         anchors.fill: parent
                         title: "Данные"
-                        tableModel: viewModel ? viewModel.dataTableModel : null
-
-                        // Используем данные из модели
-                        columnWidths: viewModel && viewModel.dataTableModel ? viewModel.dataTableModel.columnWidths : []
-                        columnHeaders: viewModel && viewModel.dataTableModel ? viewModel.dataTableModel.columnHeaders : []
-
-                        Component.onCompleted: {
-                            console.log("Data table completed")
-                            console.log("tableModel:", tableModel)
-                            console.log("columnHeaders:", columnHeaders)
-                            console.log("columnWidths:", columnWidths)
-                        }
+                        tableModel: root.hasDataModel ? viewModel.dataTableModel : null
+                        columnWidths: root.hasDataModel ? viewModel.dataTableModel.columnWidths : []
+                        columnHeaders: root.hasDataModel ? viewModel.dataTableModel.columnHeaders : []
 
                         onHeaderClicked: function(column) {
-                            console.log("Data header clicked, column:", column)
-                            viewModel.sortData(column)
+                            if (root.hasViewModel) {
+                                viewModel.sortData(column)
+                            }
                         }
                     }
                 }
@@ -251,22 +298,13 @@ ApplicationWindow {
                     SplitView.preferredHeight: 200
                     SplitView.minimumHeight: 100
 
-                    Button {
-                        text: "Очистить"
+                    Loader {
+                        sourceComponent: clearButtonComponent
                         anchors.right: parent.right
-                        highlighted: true
-                        onClicked: viewModel.clearLog()
-                        background: Rectangle {
-                            color: parent.down ? "#546E7A" : (parent.hovered ? "#78909C" : "#607D8B")
-                            radius: 3
-                            border.color: "#455A64"
-                        }
-                        contentItem: Text {
-                            text: parent.text
-                            color: "white"
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                            font.pixelSize: 10
+                        onLoaded: {
+                            item.clickHandler = function() {
+                                if (root.hasViewModel) viewModel.clearLog()
+                            }
                         }
                     }
 
@@ -277,7 +315,7 @@ ApplicationWindow {
                         Label {
                             text: "Лог"
                             font.bold: true
-                            font.pixelSize: 14
+                            font.pixelSize: root.theme.normalFontSize
                         }
 
                         ScrollView {
@@ -286,22 +324,21 @@ ApplicationWindow {
 
                             TextArea {
                                 id: logArea
-                                text: viewModel ? viewModel.logText : ""
+                                text: root.hasViewModel ? viewModel.logText : ""
                                 readOnly: true
                                 wrapMode: TextArea.Wrap
-                                font.family: "Consolas, Monaco, monospace"
-                                font.pixelSize: 10
-                                color: "#333"
+                                font.family: root.theme.monoFont
+                                font.pixelSize: root.theme.smallFontSize
+                                color: root.theme.logText
                                 selectByMouse: true
+
                                 background: Rectangle {
-                                    color: "#fafafa"
-                                    border.color: "#ddd"
+                                    color: root.theme.logBackground
+                                    border.color: root.theme.logBorder
                                 }
 
                                 // Автоскролл к началу при обновлении
-                                onTextChanged: {
-                                    logArea.cursorPosition = 0
-                                }
+                                onTextChanged: cursorPosition = 0
                             }
                         }
                     }

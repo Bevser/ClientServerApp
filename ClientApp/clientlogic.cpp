@@ -107,7 +107,10 @@ void ClientLogic::sendData() {
         m_dataSendTimer->stop();
         return;
     }
-    int dataType = QRandomGenerator::global()->bounded(0, 3);
+
+    static int dataType = 0;
+    dataType == 2 ? dataType = 0 : dataType++;
+
     QJsonObject data;
     switch (dataType) {
     case 0: data = generateNetworkMetrics(); break;
@@ -161,8 +164,8 @@ QJsonObject ClientLogic::generateLog() {
     };
     QStringList severities = {"INFO", "WARN", "ERROR", "CRITICAL"};
     QJsonObject payload; // Создаем объект для полезной нагрузки
-    payload["message"] = messages.at(QRandomGenerator::global()->bounded(messages.size()));
     payload["severity"] = severities.at(QRandomGenerator::global()->bounded(severities.size()));
+    payload["message"] = messages.at(QRandomGenerator::global()->bounded(messages.size()));
     log[Protocol::Keys::PAYLOAD] = payload;
 
     return log;

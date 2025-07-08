@@ -48,7 +48,7 @@ Dialog {
 
         readonly property string monoFont:                  "Consolas, Monaco, monospace"
         readonly property int toolButtonSize:               24
-        readonly property int smallFontSize:                10
+        readonly property int smallFontSize:                12
         readonly property int normalFontSize:               14
     }
 
@@ -151,13 +151,13 @@ Dialog {
 
                 Label {
                     text: "Адрес: " + (clientData ? clientData.address : "N/A")
-                    font.pixelSize: configDialog.theme.smallFontSize + 2
+                    font.pixelSize: configDialog.theme.smallFontSize
                     color: configDialog.theme.secondaryText
                 }
 
                 Label {
                     text: "Статус: " + (clientData ? AppEnums.clientStatusToString(clientData.status) : "N/A")
-                    font.pixelSize: configDialog.theme.smallFontSize + 2
+                    font.pixelSize: configDialog.theme.smallFontSize
                     color: isClientConnected ? configDialog.theme.connectedStatus : configDialog.theme.disconnectedStatus
                     font.bold: true
                 }

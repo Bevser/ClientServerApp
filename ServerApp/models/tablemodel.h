@@ -2,19 +2,16 @@
 #define TABLEMODEL_H
 
 #include <QAbstractTableModel>
-#include <QList>
-#include <QVariantMap>
-#include <QTime>
-#include <QFont>
 #include <QColor>
+#include <QFont>
+#include <QList>
+#include <QTime>
+#include <QVariantMap>
 
-#include "sharedkeys.h"
-#include "appenums.h"
+#include "core/appenums.h"
+#include "core/sharedkeys.h"
 
-
-
-class BaseTableModel : public QAbstractTableModel
-{
+class BaseTableModel : public QAbstractTableModel {
     Q_OBJECT
 
 public:
@@ -23,15 +20,17 @@ public:
     // --- Переопределяемые виртуальные функции ---
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
     int columnCount(const QModelIndex &parent = QModelIndex()) const override;
-    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
-    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
+    QVariant data(const QModelIndex &index,
+                  int role = Qt::DisplayRole) const override;
+    QVariant headerData(int section, Qt::Orientation orientation,
+                        int role = Qt::DisplayRole) const override;
     QHash<int, QByteArray> roleNames() const override;
 
     // --- Общие методы для управления данными ---
-    void setData(const QList<QVariantMap>& data);
-    void addRows(const QList<QVariantMap>& rowsData);
-    void addRow(const QVariantMap& rowData);
-    void updateRow(int row, const QVariantMap& rowData);
+    void setData(const QList<QVariantMap> &data);
+    void addRows(const QList<QVariantMap> &rowsData);
+    void addRow(const QVariantMap &rowData);
+    void updateRow(int row, const QVariantMap &rowData);
     void removeRows(int row, int count);
     void removeRow(int row);
     void clear();
@@ -56,9 +55,7 @@ protected:
     QList<QVariantMap> m_data;
 };
 
-
-class ClientTableModel : public BaseTableModel
-{
+class ClientTableModel : public BaseTableModel {
     Q_OBJECT
 
 public:
@@ -71,23 +68,22 @@ public:
     explicit ClientTableModel(QObject *parent = nullptr);
 
     // Переопределяем ключевые виртуальные функции
-    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+    QVariant data(const QModelIndex &index,
+                  int role = Qt::DisplayRole) const override;
     QHash<int, QByteArray> roleNames() const override;
 };
 
-class DataTableModel : public BaseTableModel
-{
+class DataTableModel : public BaseTableModel {
     Q_OBJECT
 
 public:
     // Кастомные роли для стилизации
-    enum Roles {
-        TypeColorRole = Qt::UserRole + 1
-    };
+    enum Roles { TypeColorRole = Qt::UserRole + 1 };
 
     explicit DataTableModel(QObject *parent = nullptr);
 
-    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+    QVariant data(const QModelIndex &index,
+                  int role = Qt::DisplayRole) const override;
     QHash<int, QByteArray> roleNames() const override;
 };
 

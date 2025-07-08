@@ -72,7 +72,7 @@ Dialog {
 
         readonly property string monoFont:                  "Consolas, Monaco, monospace"
         readonly property int toolButtonSize:               24
-        readonly property int smallFontSize:                10
+        readonly property int smallFontSize:                12
         readonly property int normalFontSize:               14
     }
 
@@ -99,9 +99,9 @@ Dialog {
                     id: serverTypeCombo
                     model: [
                         { text: "TCP",          value: AppEnums.TCP },
-                        { text: "UDP",          value: AppEnums.UDP },
-                        { text: "MODBUS TCP",   value: AppEnums.MODBUS_TCP },
-                        { text: "MODBUS RTU",   value: AppEnums.MODBUS_RTU }
+                        //{ text: "UDP",          value: AppEnums.UDP },
+                        //{ text: "MODBUS TCP",   value: AppEnums.MODBUS_TCP },
+                        //{ text: "MODBUS RTU",   value: AppEnums.MODBUS_RTU }
                     ]
                     textRole: "text"
                     valueRole: "value"
@@ -189,13 +189,13 @@ Dialog {
 
                                 Label {
                                     text: "Порт: " + model.port
-                                    font.pixelSize: serverDialog.theme.smallFontSize + 2
+                                    font.pixelSize: serverDialog.theme.smallFontSize
                                     color: serverDialog.theme.secondaryText
                                 }
 
                                 Label {
                                     text: "Статус: " + model.statusText
-                                    font.pixelSize: serverDialog.theme.smallFontSize + 2
+                                    font.pixelSize: serverDialog.theme.smallFontSize
                                     color: model.statusColor
                                 }
                             }
@@ -234,7 +234,7 @@ Dialog {
                                         color: parent.enabled ? "white" : serverDialog.theme.disabledButtonText
                                         horizontalAlignment: Text.AlignHCenter
                                         verticalAlignment: Text.AlignVCenter
-                                        font.pixelSize: serverDialog.theme.smallFontSize + 1
+                                        font.pixelSize: serverDialog.theme.smallFontSize
                                     }
 
                                     onClicked: {
@@ -265,7 +265,7 @@ Dialog {
                                         color: parent.enabled ? "white" : serverDialog.theme.disabledButtonText
                                         horizontalAlignment: Text.AlignHCenter
                                         verticalAlignment: Text.AlignVCenter
-                                        font.pixelSize: serverDialog.theme.smallFontSize + 1
+                                        font.pixelSize: serverDialog.theme.smallFontSize
                                     }
 
                                     onClicked: {

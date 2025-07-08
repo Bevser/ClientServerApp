@@ -1,11 +1,12 @@
 #include "serverviewmodel.h"
 
 ServerViewModel::ServerViewModel(QObject *parent)
-    : QObject(parent), m_clientSortOrder(Qt::AscendingOrder), m_dataSortOrder(Qt::AscendingOrder) {
+    : QObject(parent), m_clientSortOrder(Qt::AscendingOrder),
+    m_dataSortOrder(Qt::AscendingOrder) {
 
-    m_clientTableModel  = new ClientTableModel(this);
-    m_dataTableModel    = new DataTableModel(this);
-    m_serverListModel   = new ServerListModel(this);
+    m_clientTableModel = new ClientTableModel(this);
+    m_dataTableModel = new DataTableModel(this);
+    m_serverListModel = new ServerListModel(this);
 
     // Настраиваем рабочий поток
     setupWorkerThread();
@@ -25,33 +26,34 @@ void ServerViewModel::setupWorkerThread() {
     m_serverWorker->moveToThread(m_workerThread);
 
     // Подключаем сигналы от рабочего потока к UI
-    connect(m_serverWorker, &ServerWorker::clientBatchReady,
-            this, &ServerViewModel::handleClientBatchUpdate, Qt::QueuedConnection);
-    connect(m_serverWorker, &ServerWorker::dataBatchReady,
-            this, &ServerViewModel::handleDataBatchReceived, Qt::QueuedConnection);
-    connect(m_serverWorker, &ServerWorker::logBatchReady,
-            this, &ServerViewModel::handleLogBatch, Qt::QueuedConnection);
-    connect(m_serverWorker, &ServerWorker::serverStatusUpdate,
-            this, &ServerViewModel::handleServerStatusUpdate, Qt::QueuedConnection);
+    connect(m_serverWorker, &ServerWorker::clientBatchReady, this,
+            &ServerViewModel::handleClientBatchUpdate, Qt::QueuedConnection);
+    connect(m_serverWorker, &ServerWorker::dataBatchReady, this,
+            &ServerViewModel::handleDataBatchReceived, Qt::QueuedConnection);
+    connect(m_serverWorker, &ServerWorker::logBatchReady, this,
+            &ServerViewModel::handleLogBatch, Qt::QueuedConnection);
+    connect(m_serverWorker, &ServerWorker::serverStatusUpdate, this,
+            &ServerViewModel::handleServerStatusUpdate, Qt::QueuedConnection);
 
     // Подключаем сигналы от UI к рабочему потоку
-    connect(this, &ServerViewModel::startServerRequested,
-            m_serverWorker, &ServerWorker::startServer, Qt::QueuedConnection);
-    connect(this, &ServerViewModel::stopServerRequested,
-            m_serverWorker, &ServerWorker::stopServer, Qt::QueuedConnection);
-    connect(this, &ServerViewModel::deleteServerRequested,
-            m_serverWorker, &ServerWorker::deleteServer, Qt::QueuedConnection);
-    connect(this, &ServerViewModel::sendToAllRequested,
-            m_serverWorker, &ServerWorker::sendToAllClients, Qt::QueuedConnection);
-    connect(this, &ServerViewModel::updateClientConfigRequested,
-            m_serverWorker, &ServerWorker::updateClientConfiguration, Qt::QueuedConnection);
-    connect(this, &ServerViewModel::removeDisconnectedRequested,
-            m_serverWorker, &ServerWorker::removeDisconnectedClients, Qt::QueuedConnection);
-    connect(this, &ServerViewModel::clearClientsRequested,
-            m_serverWorker, &ServerWorker::clearClients, Qt::QueuedConnection);
+    connect(this, &ServerViewModel::startServerRequested, m_serverWorker,
+            &ServerWorker::startServer, Qt::QueuedConnection);
+    connect(this, &ServerViewModel::stopServerRequested, m_serverWorker,
+            &ServerWorker::stopServer, Qt::QueuedConnection);
+    connect(this, &ServerViewModel::deleteServerRequested, m_serverWorker,
+            &ServerWorker::deleteServer, Qt::QueuedConnection);
+    connect(this, &ServerViewModel::sendToAllRequested, m_serverWorker,
+            &ServerWorker::sendToAllClients, Qt::QueuedConnection);
+    connect(this, &ServerViewModel::updateClientConfigRequested, m_serverWorker,
+            &ServerWorker::updateClientConfiguration, Qt::QueuedConnection);
+    connect(this, &ServerViewModel::removeDisconnectedRequested, m_serverWorker,
+            &ServerWorker::removeDisconnectedClients, Qt::QueuedConnection);
+    connect(this, &ServerViewModel::clearClientsRequested, m_serverWorker,
+            &ServerWorker::clearClients, Qt::QueuedConnection);
 
     // Очистка при завершении потока
-    connect(m_workerThread, &QThread::finished, m_serverWorker, &QObject::deleteLater);
+    connect(m_workerThread, &QThread::finished, m_serverWorker,
+            &QObject::deleteLater);
 
     m_workerThread->start();
 }
@@ -60,13 +62,16 @@ void ServerViewModel::addServerToList(AppEnums::ServerType type, quint16 port) {
     m_serverListModel->addServer(type, port);
 }
 
-void ServerViewModel::removeServerFromList(AppEnums::ServerType type, quint16 port) {
+void ServerViewModel::removeServerFromList(AppEnums::ServerType type,
+                                           quint16 port) {
     emit deleteServerRequested(type, port);
     m_serverListModel->removeServer(type, port);
 }
 
-void ServerViewModel::handleServerStatusUpdate(AppEnums::ServerType type, quint16 port,
-                                               AppEnums::ServerStatus status, int connections) {
+void ServerViewModel::handleServerStatusUpdate(AppEnums::ServerType type,
+                                               quint16 port,
+                                               AppEnums::ServerStatus status,
+                                               int connections) {
     m_serverListModel->updateServerStatus(type, port, status, connections);
 }
 
@@ -86,14 +91,17 @@ void ServerViewModel::stopAllClients() {
     emit sendToAllRequested(Protocol::Commands::STOP);
 }
 
-void ServerViewModel::handleDataBatchReceived(const QList<QVariantMap>& dataBatch) {
+void ServerViewModel::handleDataBatchReceived(
+    const QList<QVariantMap> &dataBatch) {
     if (m_dataTableModel) {
         m_dataTableModel->addRows(dataBatch);
 
         if (m_dataTableModel->rowCount() > MAX_DATA_TABLE_ROWS) {
-            int rowsToRemove = m_dataTableModel->rowCount() - (MAX_DATA_TABLE_ROWS - DATA_TABLE_TRIM_LENGTH);
+            int rowsToRemove = m_dataTableModel->rowCount() -
+                               (MAX_DATA_TABLE_ROWS - DATA_TABLE_TRIM_LENGTH);
             if (rowsToRemove > 0) {
-                m_dataTableModel->removeRows(MAX_DATA_TABLE_ROWS - DATA_TABLE_TRIM_LENGTH, rowsToRemove);
+                m_dataTableModel->removeRows(
+                    MAX_DATA_TABLE_ROWS - DATA_TABLE_TRIM_LENGTH, rowsToRemove);
             }
         }
     }
@@ -103,34 +111,36 @@ void ServerViewModel::removeDisconnectedClients() {
     emit removeDisconnectedRequested();
 }
 
-void ServerViewModel::updateClientConfiguration(const QVariantMap& config) {
+void ServerViewModel::updateClientConfiguration(const QVariantMap &config) {
     emit updateClientConfigRequested(config);
 }
 
-ClientTableModel* ServerViewModel::clientTableModel() const {
+ClientTableModel *ServerViewModel::clientTableModel() const {
     return m_clientTableModel;
 }
 
-DataTableModel* ServerViewModel::dataTableModel() const {
+DataTableModel *ServerViewModel::dataTableModel() const {
     return m_dataTableModel;
 }
 
-ServerListModel* ServerViewModel::serverListModel() const {
+ServerListModel *ServerViewModel::serverListModel() const {
     return m_serverListModel;
 }
 
-QString ServerViewModel::logText() const {
-    return m_logText;
-}
+QString ServerViewModel::logText() const { return m_logText; }
 
 void ServerViewModel::sortClients(int columnIndex) {
     m_clientTableModel->sortByColumn(columnIndex, m_clientSortOrder);
-    m_clientSortOrder = (m_clientSortOrder == Qt::AscendingOrder) ? Qt::DescendingOrder : Qt::AscendingOrder;
+    m_clientSortOrder = (m_clientSortOrder == Qt::AscendingOrder)
+                            ? Qt::DescendingOrder
+                            : Qt::AscendingOrder;
 }
 
 void ServerViewModel::sortData(int columnIndex) {
     m_dataTableModel->sortByColumn(columnIndex, m_dataSortOrder);
-    m_dataSortOrder = (m_dataSortOrder == Qt::AscendingOrder) ? Qt::DescendingOrder : Qt::AscendingOrder;
+    m_dataSortOrder = (m_dataSortOrder == Qt::AscendingOrder)
+                          ? Qt::DescendingOrder
+                          : Qt::AscendingOrder;
 }
 
 void ServerViewModel::clearLog() {
@@ -138,12 +148,11 @@ void ServerViewModel::clearLog() {
     emit logTextChanged();
 }
 
-void ServerViewModel::clearData() {
-    m_dataTableModel->clear();
-}
+void ServerViewModel::clearData() { m_dataTableModel->clear(); }
 
-void ServerViewModel::handleLogBatch(const QStringList& logBatch) {
-    if (logBatch.isEmpty()) return;
+void ServerViewModel::handleLogBatch(const QStringList &logBatch) {
+    if (logBatch.isEmpty())
+        return;
     QStringList reversedLog = logBatch;
     std::reverse(reversedLog.begin(), reversedLog.end());
 
@@ -156,7 +165,8 @@ void ServerViewModel::handleServerStopped() {
     m_dataTableModel->clear();
 }
 
-void ServerViewModel::handleClientBatchUpdate(const QList<QVariantMap>& clientBatch) {
+void ServerViewModel::handleClientBatchUpdate(
+    const QList<QVariantMap> &clientBatch) {
     if (clientBatch.isEmpty()) {
         return;
     }
@@ -164,7 +174,7 @@ void ServerViewModel::handleClientBatchUpdate(const QList<QVariantMap>& clientBa
     // 1. Создаём карту обновлений для быстрого доступа по дескриптору
     QHash<QString, QVariantMap> batchMap;
     batchMap.reserve(clientBatch.size());
-    for (const QVariantMap& clientData : clientBatch) {
+    for (const QVariantMap &clientData : clientBatch) {
         batchMap.insert(clientData.value(Keys::DESCRIPTOR).toString(), clientData);
     }
 
@@ -192,7 +202,7 @@ void ServerViewModel::handleClientBatchUpdate(const QList<QVariantMap>& clientBa
     }
 
     // 3. Все клиенты, оставшиеся в batchMap, являются новыми
-    for (const QVariantMap& newClientData : batchMap.values()) {
+    for (const QVariantMap &newClientData : batchMap.values()) {
         int status = newClientData.value(Keys::STATUS).toInt();
         // Добавляем нового клиента, только если он не "DISCONNECTED" или "DELETED"
         if (status != AppEnums::DISCONNECTED && status != AppEnums::DELETED) {

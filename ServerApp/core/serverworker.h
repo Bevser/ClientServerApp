@@ -1,17 +1,17 @@
 #ifndef SERVERWORKER_H
 #define SERVERWORKER_H
 
-#include <QObject>
-#include <QThread>
 #include <QMutex>
 #include <QMutexLocker>
+#include <QObject>
+#include <QThread>
 #include <QTimer>
-#include "dataprocessing.h"
-#include "iserver.h"
-#include "serverfactory.h"
 
-class ServerWorker : public QObject
-{
+#include "core/dataprocessing.h"
+#include "core/iserver.h"
+#include "core/serverfactory.h"
+
+class ServerWorker : public QObject {
     Q_OBJECT
 
     static constexpr int BATCH_TIMEOUT_MS           = 500;
@@ -21,7 +21,7 @@ public:
     explicit ServerWorker(QObject *parent = nullptr);
     ~ServerWorker();
 
-    DataProcessing* dataProcessing() const { return m_dataProcessing; }
+    DataProcessing *dataProcessing() const { return m_dataProcessing; }
 
 public slots:
     void startServer(AppEnums::ServerType type, quint16 port);
@@ -36,7 +36,8 @@ signals:
     // Сигналы для передачи в UI поток
     void serverStarted();
     void serverStopped();
-    void serverStatusUpdate(AppEnums::ServerType type, quint16 port, AppEnums::ServerStatus status, int connections);
+    void serverStatusUpdate(AppEnums::ServerType type, quint16 port,
+                            AppEnums::ServerStatus status, int connections);
     void clientBatchReady(const QList<QVariantMap> &clientBatch);
     void dataBatchReady(const QList<QVariantMap> &dataBatch);
     void logBatchReady(const QStringList &logBatch);
@@ -46,11 +47,11 @@ private slots:
     void handleBatchTimerTimeout();
 
 private:
-    QTimer* m_batchTimer;
+    QTimer *m_batchTimer;
     QStringList m_logBatch;
 
-    DataProcessing* m_dataProcessing;
-    QHash<QPair<AppEnums::ServerType, quint16>, IServer*> m_servers;
+    DataProcessing *m_dataProcessing;
+    QHash<QPair<AppEnums::ServerType, quint16>, IServer *> m_servers;
 };
 
 #endif // SERVERWORKER_H

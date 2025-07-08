@@ -7,15 +7,15 @@ ServerWorker::ServerWorker(QObject *parent)
     m_dataProcessing = new DataProcessing(this);
 
     // Подключаем сигналы для передачи в UI поток
-    connect(m_dataProcessing, &DataProcessing::logMessage,
-            this, &ServerWorker::handleLogMessage);
+    connect(m_dataProcessing, &DataProcessing::logMessage, this,
+            &ServerWorker::handleLogMessage);
 
     m_batchTimer = new QTimer(this);
-    connect(m_batchTimer, &QTimer::timeout, this, &ServerWorker::handleBatchTimerTimeout);
+    connect(m_batchTimer, &QTimer::timeout, this,
+            &ServerWorker::handleBatchTimerTimeout);
 }
 
-ServerWorker::~ServerWorker() {
-}
+ServerWorker::~ServerWorker() {}
 
 void ServerWorker::handleBatchTimerTimeout() {
     if (m_dataProcessing) {
@@ -43,16 +43,18 @@ void ServerWorker::handleBatchTimerTimeout() {
         // Обновляем статусы серверов
         for (auto it = m_servers.constBegin(); it != m_servers.constEnd(); ++it) {
             if (it.value()->isListening()) {
-                const auto& key = it.key();
+                const auto &key = it.key();
                 emit serverStatusUpdate(key.first, key.second,
-                                        AppEnums::ServerStatus::RUNNING, it.value()->clientCount());
+                                        AppEnums::ServerStatus::RUNNING,
+                                        it.value()->clientCount());
             }
         }
     }
 }
 
 void ServerWorker::handleLogMessage(const QString &message) {
-    QString timestamp = QDateTime::currentDateTime().toString("dd.MM.yy hh:mm:ss");
+    QString timestamp =
+        QDateTime::currentDateTime().toString("dd.MM.yy hh:mm:ss");
     m_logBatch.append(QString("[%1] %2\n").arg(timestamp).arg(message));
 }
 
@@ -67,7 +69,7 @@ void ServerWorker::startServer(AppEnums::ServerType type, quint16 port) {
         return;
     }
 
-    IServer* server = ServerFactory::createServer(type);
+    IServer *server = ServerFactory::createServer(type);
     if (!server) {
         handleLogMessage("Ошибка: не удалось создать сервер.");
         emit serverStatusUpdate(type, port, AppEnums::ServerStatus::ERROR, 0);
@@ -91,7 +93,7 @@ void ServerWorker::stopServer(AppEnums::ServerType type, quint16 port) {
     const auto key = qMakePair(type, port);
 
     if (m_servers.contains(key)) {
-        IServer* server = m_servers[key];
+        IServer *server = m_servers[key];
         server->stopServer();
 
         handleLogMessage(QString("Сервер на порту %1 остановлен.").arg(port));
@@ -99,12 +101,11 @@ void ServerWorker::stopServer(AppEnums::ServerType type, quint16 port) {
     }
 }
 
-void ServerWorker::deleteServer(AppEnums::ServerType type, quint16 port)
-{
+void ServerWorker::deleteServer(AppEnums::ServerType type, quint16 port) {
     const auto key = qMakePair(type, port);
 
     if (m_servers.contains(key)) {
-        IServer* server = m_servers.take(key);
+        IServer *server = m_servers.take(key);
         removeDisconnectedClients();
         server->deleteLater();
     }

@@ -2,12 +2,13 @@
 #ifndef SERVERFACTORY_H
 #define SERVERFACTORY_H
 
-#include "tcpserver.h"
 #include "appenums.h"
+#include "tcpserver.h"
 
 class ServerFactory {
 public:
-    static IServer* createServer(AppEnums::ServerType type, QObject* parent = nullptr) {
+    static IServer *createServer(AppEnums::ServerType type,
+                                 QObject *parent = nullptr) {
         if (type == AppEnums::ServerType::TCP) {
             return new TcpServer(parent);
         } else if (type == AppEnums::ServerType::UDP) { // Пример

@@ -1,12 +1,12 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
-#include <QQuickWindow>
 #include <QQuickStyle>
-#include "serverviewmodel.h"
+#include <QQuickWindow>
 
-int main(int argc, char *argv[])
-{
+#include "models/serverviewmodel.h"
+
+int main(int argc, char *argv[]) {
     QGuiApplication app(argc, argv);
     app.setWindowIcon(QIcon(":/resource/icon.ico"));
 
@@ -14,9 +14,9 @@ int main(int argc, char *argv[])
 
     QQmlApplicationEngine engine;
 
-    qmlRegisterSingletonType<AppEnums>("enums", 1, 0, "AppEnums", [](QQmlEngine*, QJSEngine*) -> QObject* {
-        return new AppEnums();
-    });
+    qmlRegisterSingletonType<AppEnums>(
+        "enums", 1, 0, "AppEnums",
+        [](QQmlEngine *, QJSEngine *) -> QObject * { return new AppEnums(); });
 
     ServerViewModel serverViewModel(&app);
 

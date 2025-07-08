@@ -1,11 +1,11 @@
 #ifndef TCPCLIENT_H
 #define TCPCLIENT_H
 
-#include <QTcpSocket>
-#include <QJsonObject>
-#include <QJsonDocument>
-#include <QJsonParseError>
 #include "iclient.h"
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonParseError>
+#include <QTcpSocket>
 
 class TcpClient : public IClient {
     Q_OBJECT
@@ -20,13 +20,13 @@ public:
     QString address() const override;
     quint16 port() const override;
 
-    void setId(const QString& id) override;
+    void setId(const QString &id) override;
 
-    void connectToHost(const QString &host, quint16 port);
+    void connectToHost(const QString &host, quint16 port) override;
     void disconnect() override;
 
-    void sendData(const QJsonObject& json);
-    void sendData(const QByteArray& data) override;
+    void sendData(const QJsonObject &json);
+    void sendData(const QByteArray &data) override;
 
 private slots:
     void handleConnected() override;
@@ -35,7 +35,7 @@ private slots:
     void handleError(QAbstractSocket::SocketError socketError);
 
 private:
-    QTcpSocket* m_socket;
+    QTcpSocket *m_socket;
     QString m_id;
     quintptr m_descriptor;
 };

@@ -16,7 +16,7 @@ Item {
     property var onCellDoubleClicked: null
     property var onHeaderClicked: null
 
-    // Настройки стилей (сгруппированы)
+    // Темы и стили
     readonly property QtObject theme: QtObject {
         readonly property color headerColor:        "#37474f"
         readonly property color headerHoverColor:   "#455a64"

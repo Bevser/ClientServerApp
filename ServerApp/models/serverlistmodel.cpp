@@ -1,6 +1,7 @@
 #include "serverlistmodel.h"
 
-ServerListModel::ServerListModel(QObject *parent) : QAbstractListModel(parent) {}
+ServerListModel::ServerListModel(QObject *parent)
+    : QAbstractListModel(parent) {}
 
 int ServerListModel::rowCount(const QModelIndex &parent) const {
     Q_UNUSED(parent);
@@ -12,7 +13,8 @@ QVariant ServerListModel::data(const QModelIndex &index, int role) const {
         return QVariant();
 
     const QVariantMap &server = m_servers[index.row()];
-    auto status = static_cast<AppEnums::ServerStatus>(server.value("status").toInt());
+    auto status =
+        static_cast<AppEnums::ServerStatus>(server.value("status").toInt());
     auto connections = server.value("connections").toInt();
 
     switch (role) {
@@ -47,17 +49,17 @@ QVariant ServerListModel::data(const QModelIndex &index, int role) const {
 
 QHash<int, QByteArray> ServerListModel::roleNames() const {
     QHash<int, QByteArray> roles;
-    roles[TypeRole]         = "type";
-    roles[TypeStrRole]      = "typeStr";
-    roles[PortRole]         = "port";
-    roles[StatusRole]       = "status";
-    roles[ConnectionsRole]  = "connections";
-    roles[StatusTextRole]   = "statusText";
-    roles[StatusColorRole]  = "statusColor";
-    roles[CanDeleteRole]    = "canDelete";
-    roles[CanStartRole]     = "canStart";
-    roles[CanStopRole]      = "canStop";
-    roles[ServerInfoRole]   = "serverInfo";
+    roles[TypeRole] = "type";
+    roles[TypeStrRole] = "typeStr";
+    roles[PortRole] = "port";
+    roles[StatusRole] = "status";
+    roles[ConnectionsRole] = "connections";
+    roles[StatusTextRole] = "statusText";
+    roles[StatusColorRole] = "statusColor";
+    roles[CanDeleteRole] = "canDelete";
+    roles[CanStartRole] = "canStart";
+    roles[CanStopRole] = "canStop";
+    roles[ServerInfoRole] = "serverInfo";
     return roles;
 }
 
@@ -90,8 +92,10 @@ void ServerListModel::removeServer(AppEnums::ServerType type, quint16 port) {
     }
 }
 
-void ServerListModel::updateServerStatus(AppEnums::ServerType type, quint16 port,
-                                         AppEnums::ServerStatus status, int connections) {
+void ServerListModel::updateServerStatus(AppEnums::ServerType type,
+                                         quint16 port,
+                                         AppEnums::ServerStatus status,
+                                         int connections) {
     for (int i = 0; i < m_servers.count(); ++i) {
         if (m_servers[i].value("port").toUInt() == port &&
             m_servers[i].value("type").toInt() == (int)type) {
@@ -100,16 +104,16 @@ void ServerListModel::updateServerStatus(AppEnums::ServerType type, quint16 port
 
             // Обновляем все связанные роли
             QVector<int> changedRoles = {
-                StatusRole, ConnectionsRole, StatusTextRole,
-                StatusColorRole, CanDeleteRole, CanStartRole, CanStopRole
-            };
+                                         StatusRole,    ConnectionsRole, StatusTextRole, StatusColorRole,
+                CanDeleteRole, CanStartRole,    CanStopRole};
             emit dataChanged(index(i, 0), index(i, 0), changedRoles);
             return;
         }
     }
 }
 
-bool ServerListModel::canAddServer(AppEnums::ServerType type, quint16 port) const {
+bool ServerListModel::canAddServer(AppEnums::ServerType type,
+                                   quint16 port) const {
     // Проверка валидности порта
     if (!isPortValid(port)) {
         return false;
@@ -123,8 +127,9 @@ bool ServerListModel::isPortValid(quint16 port) const {
     return port >= 1024 && port <= 65535;
 }
 
-bool ServerListModel::isServerExists(AppEnums::ServerType type, quint16 port) const {
-    for (const auto& server : qAsConst(m_servers)) {
+bool ServerListModel::isServerExists(AppEnums::ServerType type,
+                                     quint16 port) const {
+    for (const auto &server : qAsConst(m_servers)) {
         if (server.value("port").toUInt() == port &&
             server.value("type").toInt() == (int)type) {
             return true;
@@ -133,7 +138,8 @@ bool ServerListModel::isServerExists(AppEnums::ServerType type, quint16 port) co
     return false;
 }
 
-QString ServerListModel::formatStatusText(AppEnums::ServerStatus status, int connections) const {
+QString ServerListModel::formatStatusText(AppEnums::ServerStatus status,
+                                          int connections) const {
     QString statusStr = AppEnums::serverStatusToString(status);
 
     if (status == AppEnums::ServerStatus::RUNNING && connections > 0) {
@@ -146,16 +152,17 @@ QString ServerListModel::formatStatusText(AppEnums::ServerStatus status, int con
 QString ServerListModel::getStatusColor(AppEnums::ServerStatus status) const {
     switch (status) {
     case AppEnums::ServerStatus::RUNNING:
-        return "#4CAF50";  // Зеленый
+        return "#4CAF50"; // Зеленый
     case AppEnums::ServerStatus::ERROR:
-        return "#f44336";  // Красный
+        return "#f44336"; // Красный
     case AppEnums::ServerStatus::STOPPED:
     default:
-        return "#607D8B";  // Серый
+        return "#607D8B"; // Серый
     }
 }
 
-bool ServerListModel::canPerformAction(AppEnums::ServerStatus status, const QString& action) const {
+bool ServerListModel::canPerformAction(AppEnums::ServerStatus status,
+                                       const QString &action) const {
     if (action == "delete") {
         return status != AppEnums::ServerStatus::RUNNING;
     } else if (action == "start") {

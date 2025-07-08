@@ -21,7 +21,10 @@ target_link_libraries(ClientApp PRIVATE
 target_sources(ClientApp
   PRIVATE
     clientlogic.h clientlogic.cpp
-    ../ServerApp/protocol.h
+    ../common/protocol.h
+    ../common/iclient.h
+    ../common/tcpclient.h
+    ../common/tcpclient.cpp
 )
 
 include(GNUInstallDirs)

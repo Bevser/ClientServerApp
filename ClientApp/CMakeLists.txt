@@ -11,6 +11,7 @@ qt_standard_project_setup()
 
 add_executable(ClientApp
   main.cpp
+  clientprotocol.h
 )
 
 target_link_libraries(ClientApp PRIVATE

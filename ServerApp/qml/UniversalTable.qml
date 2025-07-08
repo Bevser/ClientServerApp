@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import ServerApp
 
 Item {
     id: root
@@ -10,37 +11,17 @@ Item {
     property var tableModel:    null
     property var columnWidths:  []
     property var columnHeaders: []
+    property int tooltipColumn: -1
 
     // Колбэки
-    property var onCellClicked: null
-    property var onCellDoubleClicked: null
-    property var onHeaderClicked: null
-
-    // Темы и стили
-    readonly property QtObject theme: QtObject {
-        readonly property color headerColor:        "#37474f"
-        readonly property color headerHoverColor:   "#455a64"
-        readonly property color headerBorderColor:  "#263238"
-        readonly property color headerTextColor:    "white"
-
-        readonly property color evenRowColor:       "#ffffff"
-        readonly property color oddRowColor:        "#f8f9fa"
-        readonly property color hoverRowColor:      "#f0f8f0"
-        readonly property color selectedRowColor:   "#dcf0dc"
-
-        readonly property color borderColor:        "#e0e0e0"
-        readonly property color textColor:          "#424242"
-
-        readonly property string fontFamily:        "Arial"
-        readonly property int fontSize:             11
-        readonly property int rowHeight:            35
-        readonly property int headerHeight:         35
-    }
+    property var onCellClicked:         null
+    property var onCellDoubleClicked:   null
+    property var onHeaderClicked:       null
 
     // Состояние таблицы
-    property int selectedRow: -1
-    property int hoveredRow: -1
-    property int sortedColumn: -1
+    property int selectedRow:   -1
+    property int hoveredRow:    -1
+    property int sortedColumn:  -1
 
     // Внутренние свойства
     readonly property bool hasHeaders: columnHeaders && columnHeaders.length > 0
@@ -71,7 +52,7 @@ Item {
         Label {
             text: root.title
             font.bold: true
-            font.pixelSize: 14
+            font.pixelSize: AppTheme.normalFontSize
             Layout.alignment: Qt.AlignLeft
             Layout.bottomMargin: 5
             visible: root.title !== ""
@@ -81,9 +62,9 @@ Item {
         Rectangle {
             id: headerContainer
             Layout.fillWidth: true
-            height: root.theme.headerHeight
-            color: root.theme.headerColor
-            border.color: root.theme.headerBorderColor
+            height: AppTheme.headerHeight
+            color: AppTheme.headerColor
+            border.color: AppTheme.headerBorderColor
             border.width: 1
             visible: root.hasHeaders
 
@@ -96,10 +77,10 @@ Item {
                     Rectangle {
                         id: headerCell
                         width: root.getColumnWidth(index, headerContainer.width)
-                        height: root.theme.headerHeight
-                        color: headerMouseArea.containsMouse ? root.theme.headerHoverColor : root.theme.headerColor
+                        height: AppTheme.headerHeight
+                        color: headerMouseArea.containsMouse ? AppTheme.headerHoverColor : AppTheme.headerColor
                         border.width: index > 0 ? 1 : 0
-                        border.color: root.theme.headerBorderColor
+                        border.color: AppTheme.headerBorderColor
 
                         MouseArea {
                             id: headerMouseArea
@@ -121,10 +102,10 @@ Item {
 
                             Label {
                                 text: modelData || ""
-                                color: root.theme.headerTextColor
+                                color: AppTheme.headerTextColor
                                 font.bold: true
-                                font.family: root.theme.fontFamily
-                                font.pixelSize: root.theme.fontSize + 1
+                                font.family: AppTheme.fontFamily
+                                font.pixelSize: AppTheme.fontSize + 1
                                 anchors.verticalCenter: parent.verticalCenter
                                 elide: Text.ElideRight
                             }
@@ -147,7 +128,7 @@ Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
             color: "transparent"
-            border.color: root.theme.borderColor
+            border.color: AppTheme.borderColor
             border.width: 1
 
             TableView {
@@ -170,26 +151,27 @@ Item {
                 }
 
                 rowHeightProvider: function (row) {
-                    return root.theme.rowHeight
+                    return AppTheme.rowHeight
                 }
 
                 delegate: Rectangle {
                     id: cellDelegate
                     implicitWidth: 100
-                    implicitHeight: root.theme.rowHeight
+                    implicitHeight: AppTheme.rowHeight
 
                     // Вычисление цвета
                     readonly property color cellColor: {
-                        if (row === root.selectedRow) return root.theme.selectedRowColor
-                        if (row === root.hoveredRow) return root.theme.hoverRowColor
-                        return row % 2 === 0 ? root.theme.evenRowColor : root.theme.oddRowColor
+                        if (row === root.selectedRow) return AppTheme.selectedRowColor
+                        if (row === root.hoveredRow) return AppTheme.hoverRowColor
+                        return row % 2 === 0 ? AppTheme.evenRowColor : AppTheme.oddRowColor
                     }
 
                     color: cellColor
-                    border.color: root.theme.borderColor
+                    border.color: AppTheme.borderColor
                     border.width: 0.5
 
                     MouseArea {
+                        id: cellMouseArea
                         anchors.fill: parent
                         hoverEnabled: true
 
@@ -228,14 +210,47 @@ Item {
                         }
                     }
 
+                    ToolTip {
+                        id: cellToolTip
+                        visible: cellMouseArea.containsMouse &&
+                                root.tooltipColumn >= 0 &&
+                                column === root.tooltipColumn &&
+                                model.display &&
+                                model.display.toString().length > 0
+                        delay: 500  // Задержка перед показом подсказки (мс)
+
+                        text: model.display ? model.display.toString() : ""
+
+                        // Стилизация подсказки
+                        background: Rectangle {
+                            color: AppTheme.tooltipBackgroundColor
+                            border.color: AppTheme.tooltipBorderColor
+                            border.width: 1
+                            radius: 4
+                        }
+
+                        contentItem: Text {
+                            text: cellToolTip.text
+                            color: AppTheme.tooltipTextColor
+                            font.family: AppTheme.fontFamily
+                            font.pixelSize: AppTheme.fontSize
+                            wrapMode: Text.Wrap
+                            maximumLineCount: 10
+                        }
+
+                        // Позиционирование подсказки
+                        x: cellMouseArea.mouseX + 10
+                        y: cellMouseArea.mouseY + 10
+                    }
+
                     Text {
                         anchors.centerIn: parent
                         anchors.margins: 5
                         text: model.display ? model.display.toString() : ""
-                        color: model.statusColor || model.typeColor || root.theme.textColor
+                        color: model.statusColor || model.typeColor || AppTheme.textColor
                         font.bold: model.isBold || false
-                        font.family: root.theme.fontFamily
-                        font.pixelSize: root.theme.fontSize
+                        font.family: AppTheme.fontFamily
+                        font.pixelSize: AppTheme.fontSize
                         elide: Text.ElideRight
                         width: parent.width - 10
                         horizontalAlignment: Text.AlignHCenter

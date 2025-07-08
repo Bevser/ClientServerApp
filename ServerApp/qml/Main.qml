@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
-import enums 1.0
+import ServerApp
 
 ApplicationWindow {
     id: root
@@ -12,39 +12,6 @@ ApplicationWindow {
     visible:        true
     title:          "Базовая станция"
     color:          "#f0f0f0"
-
-    // Темы и стили
-    readonly property QtObject theme: QtObject {
-        readonly property color toolButtonPressed:          "#d4d4d4"
-        readonly property color toolButtonHovered:          "#e8e8e8"
-        readonly property color toolButtonBorder:           "#c0c0c0"
-        readonly property color toolButtonBorderPressed:    "#a0a0a0"
-        readonly property color separatorColor:             "#d0d0d0"
-
-        readonly property color startButtonPressed:         "#c8e6c9"
-        readonly property color startButtonHovered:         "#e8f5e8"
-        readonly property color startButtonBorder:          "#81c784"
-        readonly property color startButtonBorderPressed:   "#4caf50"
-
-        readonly property color stopButtonPressed:          "#ffcdd2"
-        readonly property color stopButtonHovered:          "#ffebee"
-        readonly property color stopButtonBorder:           "#e57373"
-        readonly property color stopButtonBorderPressed:    "#f44336"
-
-        readonly property color clearButtonNormal:          "#607D8B"
-        readonly property color clearButtonHovered:         "#78909C"
-        readonly property color clearButtonPressed:         "#546E7A"
-        readonly property color clearButtonBorder:          "#455A64"
-
-        readonly property color logBackground:              "#fafafa"
-        readonly property color logBorder:                  "#ddd"
-        readonly property color logText:                    "#333"
-
-        readonly property string monoFont:                  "Consolas, Monaco, monospace"
-        readonly property int toolButtonSize:               24
-        readonly property int smallFontSize:                10
-        readonly property int normalFontSize:               14
-    }
 
     // Проверка доступности viewModel
     readonly property bool hasViewModel: viewModel !== null && viewModel !== undefined
@@ -80,10 +47,10 @@ ApplicationWindow {
             onClicked: if (clickHandler) clickHandler()
 
             background: Rectangle {
-                color: parent.down ? root.theme.clearButtonPressed :
-                      (parent.hovered ? root.theme.clearButtonHovered : root.theme.clearButtonNormal)
+                color: parent.down ? AppTheme.clearButtonPressed :
+                      (parent.hovered ? AppTheme.clearButtonHovered : AppTheme.clearButtonNormal)
                 radius: 3
-                border.color: root.theme.clearButtonBorder
+                border.color: AppTheme.clearButtonBorder
             }
 
             contentItem: Text {
@@ -91,7 +58,7 @@ ApplicationWindow {
                 color: "white"
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
-                font.pixelSize: root.theme.smallFontSize
+                font.pixelSize: AppTheme.smallFontSize
             }
         }
     }
@@ -104,8 +71,8 @@ ApplicationWindow {
             property var clickHandler: null
             property string buttonType: "normal" // normal, start, stop
 
-            icon.width: root.theme.toolButtonSize
-            icon.height: root.theme.toolButtonSize
+            icon.width: AppTheme.toolButtonSize
+            icon.height: AppTheme.toolButtonSize
             icon.source: iconPath
             display: AbstractButton.IconOnly
             onClicked: if (clickHandler) clickHandler()
@@ -116,26 +83,26 @@ ApplicationWindow {
             background: Rectangle {
                 color: {
                     if (buttonType === "start") {
-                        return parent.pressed ? root.theme.startButtonPressed :
-                              (parent.hovered ? root.theme.startButtonHovered : "transparent")
+                        return parent.pressed ? AppTheme.startButtonPressed :
+                              (parent.hovered ? AppTheme.startButtonHovered : "transparent")
                     } else if (buttonType === "stop") {
-                        return parent.pressed ? root.theme.stopButtonPressed :
-                              (parent.hovered ? root.theme.stopButtonHovered : "transparent")
+                        return parent.pressed ? AppTheme.stopButtonPressed :
+                              (parent.hovered ? AppTheme.stopButtonHovered : "transparent")
                     }
-                    return parent.pressed ? root.theme.toolButtonPressed :
-                          (parent.hovered ? root.theme.toolButtonHovered : "transparent")
+                    return parent.pressed ? AppTheme.toolButtonPressed :
+                          (parent.hovered ? AppTheme.toolButtonHovered : "transparent")
                 }
                 radius: 4
                 border.color: {
                     if (buttonType === "start") {
-                        return parent.pressed ? root.theme.startButtonBorderPressed :
-                              (parent.hovered ? root.theme.startButtonBorder : "transparent")
+                        return parent.pressed ? AppTheme.startButtonBorderPressed :
+                              (parent.hovered ? AppTheme.startButtonBorder : "transparent")
                     } else if (buttonType === "stop") {
-                        return parent.pressed ? root.theme.stopButtonBorderPressed :
-                              (parent.hovered ? root.theme.stopButtonBorder : "transparent")
+                        return parent.pressed ? AppTheme.stopButtonBorderPressed :
+                              (parent.hovered ? AppTheme.stopButtonBorder : "transparent")
                     }
-                    return parent.pressed ? root.theme.toolButtonBorderPressed :
-                          (parent.hovered ? root.theme.toolButtonBorder : "transparent")
+                    return parent.pressed ? AppTheme.toolButtonBorderPressed :
+                          (parent.hovered ? AppTheme.toolButtonBorder : "transparent")
                 }
                 border.width: 1
             }
@@ -170,8 +137,8 @@ ApplicationWindow {
                 // Разделитель
                 Rectangle {
                     width: 1
-                    height: root.theme.toolButtonSize
-                    color: root.theme.separatorColor
+                    height: AppTheme.toolButtonSize
+                    color: AppTheme.separatorColor
                     Layout.alignment: Qt.AlignVCenter
                 }
 
@@ -284,6 +251,7 @@ ApplicationWindow {
                         tableModel: root.hasDataModel ? viewModel.dataTableModel : null
                         columnWidths: root.hasDataModel ? viewModel.dataTableModel.columnWidths : []
                         columnHeaders: root.hasDataModel ? viewModel.dataTableModel.columnHeaders : []
+                        tooltipColumn: 3
 
                         onHeaderClicked: function(column) {
                             if (root.hasViewModel) {
@@ -315,7 +283,7 @@ ApplicationWindow {
                         Label {
                             text: "Лог"
                             font.bold: true
-                            font.pixelSize: root.theme.normalFontSize
+                            font.pixelSize: AppTheme.normalFontSize
                         }
 
                         ScrollView {
@@ -327,14 +295,14 @@ ApplicationWindow {
                                 text: root.hasViewModel ? viewModel.logText : ""
                                 readOnly: true
                                 wrapMode: TextArea.Wrap
-                                font.family: root.theme.monoFont
-                                font.pixelSize: root.theme.smallFontSize
-                                color: root.theme.logText
+                                font.family: AppTheme.monoFont
+                                font.pixelSize: AppTheme.smallFontSize
+                                color: AppTheme.logText
                                 selectByMouse: true
 
                                 background: Rectangle {
-                                    color: root.theme.logBackground
-                                    border.color: root.theme.logBorder
+                                    color: AppTheme.logBackground
+                                    border.color: AppTheme.logBorder
                                 }
 
                                 // Автоскролл к началу при обновлении

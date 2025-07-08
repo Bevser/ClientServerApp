@@ -247,9 +247,26 @@ QVariant DataTableModel::data(const QModelIndex &index, int role) const {
         if (key == Keys::PAYLOAD && value.typeId() == QMetaType::QVariantMap) {
             QVariantMap payloadMap = value.toMap();
             QStringList items;
-            for (auto it = payloadMap.constBegin(); it != payloadMap.constEnd();
-                 ++it) {
-                items << QString("%1: %2").arg(it.key()).arg(it.value().toString());
+            auto it = payloadMap.constEnd();
+            while (it != payloadMap.constBegin()) {
+                --it;
+                QString valStr = it.value().toString();
+
+                if (it.key() == "severity") {
+                    QString color;
+                    if (valStr == "INFO")
+                        color = "blue";
+                    else if (valStr == "WARN")
+                        color = "orange";
+                    else if (valStr == "ERROR")
+                        color = "red";
+                    else if (valStr == "CRITICAL")
+                        color = "darkred";
+
+                    valStr = QString("<font color='%1'>%2</font>").arg(color, valStr);
+                }
+
+                items << QString("%1: %2").arg(it.key(), valStr);
             }
             return items.join(", ");
         }

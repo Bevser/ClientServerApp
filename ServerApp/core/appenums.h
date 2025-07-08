@@ -3,9 +3,12 @@
 
 #include <QObject>
 #include <QString>
+#include <qqmlintegration.h>
 
 class AppEnums : public QObject {
     Q_OBJECT
+    QML_SINGLETON
+    QML_ELEMENT
 
 public:
     enum class ServerType { TCP, UDP, MODBUS_TCP, MODBUS_RTU };

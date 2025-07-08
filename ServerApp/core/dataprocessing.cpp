@@ -113,12 +113,11 @@ void DataProcessing::clearClients() {
 
 QVariantMap DataProcessing::getClientDataMap(const ClientState &state) {
     QVariantMap clientData;
-    clientData[Keys::ID] = state.client->id();
-    clientData[Keys::DESCRIPTOR] = state.client->descriptor();
-    clientData[Keys::ADDRESS] =
-        QString("%1:%2").arg(state.client->address()).arg(state.client->port());
-    clientData[Keys::PORT] = state.client->port();
-    clientData[Keys::STATUS] = state.status;
+    clientData[Keys::ID]            = state.client->id();
+    clientData[Keys::DESCRIPTOR]    = state.client->descriptor();
+    clientData[Keys::ADDRESS]       = QString("%1:%2").arg(state.client->address()).arg(state.client->port());
+    clientData[Keys::PORT]          = state.client->port();
+    clientData[Keys::STATUS]        = state.status;
     clientData[Keys::ALLOW_SENDING] = state.allowSending;
     clientData[Keys::CONFIGURATION] = state.configuration;
     return clientData;

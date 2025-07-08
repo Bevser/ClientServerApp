@@ -39,14 +39,22 @@ qt_add_executable(Server
 )
 
 # QML модуль
+set(plain_qml_files
+    qml/Main.qml
+    qml/UniversalTable.qml
+    qml/ConfigurationDialog.qml
+    qml/ServerManagementDialog.qml
+)
+set(qml_singletons
+    qml/AppTheme.qml
+)
+set_source_files_properties(${qml_singletons}
+    PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
+
 qt_add_qml_module(Server
     URI ServerApp
-    VERSION 1.0
-    QML_FILES
-        qml/Main.qml
-        qml/UniversalTable.qml
-        qml/ConfigurationDialog.qml
-        qml/ServerManagementDialog.qml
+    QML_FILES ${plain_qml_files} ${qml_singletons}
+    SOURCES
 )
 
 target_link_libraries(Server PRIVATE
@@ -55,6 +63,11 @@ target_link_libraries(Server PRIVATE
     Qt6::Qml
     Qt6::Quick
     Qt6::QuickControls2
+)
+
+target_include_directories(Server PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/core
+    ${CMAKE_CURRENT_SOURCE_DIR}/../common
 )
 
 include(GNUInstallDirs)

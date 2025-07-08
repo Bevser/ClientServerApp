@@ -14,10 +14,6 @@ int main(int argc, char *argv[]) {
 
     QQmlApplicationEngine engine;
 
-    qmlRegisterSingletonType<AppEnums>(
-        "enums", 1, 0, "AppEnums",
-        [](QQmlEngine *, QJSEngine *) -> QObject * { return new AppEnums(); });
-
     ServerViewModel serverViewModel(&app);
 
     engine.rootContext()->setContextProperty("viewModel", &serverViewModel);

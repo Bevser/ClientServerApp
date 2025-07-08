@@ -49,17 +49,17 @@ QVariant ServerListModel::data(const QModelIndex &index, int role) const {
 
 QHash<int, QByteArray> ServerListModel::roleNames() const {
     QHash<int, QByteArray> roles;
-    roles[TypeRole] = "type";
-    roles[TypeStrRole] = "typeStr";
-    roles[PortRole] = "port";
-    roles[StatusRole] = "status";
-    roles[ConnectionsRole] = "connections";
-    roles[StatusTextRole] = "statusText";
-    roles[StatusColorRole] = "statusColor";
-    roles[CanDeleteRole] = "canDelete";
-    roles[CanStartRole] = "canStart";
-    roles[CanStopRole] = "canStop";
-    roles[ServerInfoRole] = "serverInfo";
+    roles[TypeRole]         = "type";
+    roles[TypeStrRole]      = "typeStr";
+    roles[PortRole]         = "port";
+    roles[StatusRole]       = "status";
+    roles[ConnectionsRole]  = "connections";
+    roles[StatusTextRole]   = "statusText";
+    roles[StatusColorRole]  = "statusColor";
+    roles[CanDeleteRole]    = "canDelete";
+    roles[CanStartRole]     = "canStart";
+    roles[CanStopRole]      = "canStop";
+    roles[ServerInfoRole]   = "serverInfo";
     return roles;
 }
 
@@ -70,11 +70,11 @@ bool ServerListModel::addServer(AppEnums::ServerType type, quint16 port) {
 
     beginInsertRows(QModelIndex(), rowCount(), rowCount());
     QVariantMap server;
-    server["type"] = (int)type;
-    server["typeStr"] = AppEnums::typeToString(type);
-    server["port"] = port;
-    server["status"] = AppEnums::ServerStatus::STOPPED;
-    server["connections"] = 0;
+    server["type"]          = (int)type;
+    server["typeStr"]       = AppEnums::typeToString(type);
+    server["port"]          = port;
+    server["status"]        = AppEnums::ServerStatus::STOPPED;
+    server["connections"]   = 0;
     m_servers.append(server);
     endInsertRows();
     return true;

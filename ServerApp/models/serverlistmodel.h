@@ -6,6 +6,7 @@
 #include <QVariantMap>
 
 #include "core/appenums.h"
+#include "../common/protocol.h"
 
 class ServerListModel : public QAbstractListModel {
     Q_OBJECT

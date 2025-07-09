@@ -59,7 +59,8 @@ Dialog {
                 configListModel.append({
                     "key": key,
                     "value": config[key] ? config[key].toString() : "",
-                    "originalValue": config[key] ? config[key].toString() : ""
+                    "originalValue": config[key] ? config[key].toString() : "",
+                    "isReadOnly": false
                 })
             }
         }
@@ -226,7 +227,7 @@ Dialog {
                                 visible: !model.isReadOnly
                                 ToolTip.text: "Сбросить"
                                 ToolTip.visible: hovered
-                                font.pixelSize: configDialog.theme.normalFontSize
+                                font.pixelSize: AppTheme.normalFontSize
 
                                 onClicked: {
                                     if (model.originalValue !== undefined) {

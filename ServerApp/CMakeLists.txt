@@ -8,6 +8,8 @@ set(CMAKE_AUTORCC ON)
 
 qt_standard_project_setup(REQUIRES 6.5)
 
+set(app_icon_resource_windows "${CMAKE_CURRENT_SOURCE_DIR}/qml/appicon.rc")
+
 # C++ файлы
 qt_add_executable(Server
     main.cpp
@@ -36,7 +38,13 @@ qt_add_executable(Server
     ../common/tcpclient.cpp
     ../common/iclient.h
     ../common/protocol.h
+
+    ${app_icon_resource_windows}
 )
+
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    set_property(TARGET Server PROPERTY WIN32_EXECUTABLE TRUE)
+endif()
 
 # QML модуль
 set(plain_qml_files

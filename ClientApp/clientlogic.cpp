@@ -8,6 +8,13 @@ ClientLogic::ClientLogic(const QString &host, quint16 port, QObject *parent)
     m_reconnectTimer    = new QTimer(this);
     m_dataSendTimer     = new QTimer(this);
 
+    // Создаем сокет
+    QTcpSocket *socket = new QTcpSocket();
+    m_client = new TcpClient(socket, this);
+
+    // Подключаем сигналы от клиента
+    setupClientConnections();
+
     // Подключение таймеров к слотам
     connect(m_reconnectTimer, &QTimer::timeout, this,
             &ClientLogic::connectToServer);
@@ -23,22 +30,11 @@ void ClientLogic::start() {
 }
 
 void ClientLogic::connectToServer() {
-    // Проверяем, нужно ли создавать нового клиента
-    if (!m_client) {
-        // Создаем сокет
-        QTcpSocket *socket = new QTcpSocket();
-        m_client = new TcpClient(socket, this);
-
-        // Подключаем сигналы от клиента
-        setupClientConnections();
-    }
-
     qInfo() << QString(Protocol::LogMessages::CONNECTION_ATTEMPT)
                    .arg(m_host)
                    .arg(m_port);
     // Запускаем подключение
     m_client->connectToHost(m_host, m_port);
-
 }
 
 void ClientLogic::setupClientConnections() {

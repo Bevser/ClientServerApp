@@ -38,7 +38,7 @@ namespace Keys {
 const QString ID                = "id";             ///< Идентификатор клиента.
 const QString TYPE              = "type";           ///< Тип сообщения (из MessageType).
 const QString PAYLOAD           = "payload";        ///< Полезная нагрузка (данные).
-const QString COMMAND           = "command";        ///< Текст команды
+const QString COMMAND           = "command";        ///< Текст команды.
 } // namespace Keys
 
 /**

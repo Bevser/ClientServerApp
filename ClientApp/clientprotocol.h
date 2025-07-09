@@ -66,18 +66,18 @@ const QString THRESHOLD_EXCEEDED    = "Превышены пороговые з�
  * @brief Стандартизированные сообщения для вывода в консоль клиента.
  */
 namespace LogMessages {
-const QString CLIENT_STARTING       = "[ИНФО] Клиент запускается...";
-const QString CONNECTION_ATTEMPT    = "[ИНФО] Попытка подключения к %1:%2...";
-const QString CONNECTED_SUCCESS     = "[OK] Успешно подключено к серверу.";
-const QString CONNECTION_CONFIRMED  = "[OK] Подключение подтверждено. Мой ID:";
-const QString WAITING_START         = "[ИНФО] Ожидание команды 'start' от сервера...";
-const QString START_RECEIVED        = "[СТАРТ] Получена команда 'start'. Начинаю отправку данных.";
-const QString STOP_RECEIVED         = "[СТОП] Получена команда 'stop'. Прекращаю отправку данных.";
-const QString CONFIG_RECEIVED       = "[КОНФИГ] Получена новая конфигурация от сервера.";
-const QString CONFIG_PARAM          = "[КОНФИГ]";
-const QString DISCONNECTED          = "[ОШИБКА] Соединение с сервером отсутвует.";
-const QString SOCKET_ERROR          = "[ОШИБКА] Ошибка сокета:";
-const QString INVALID_JSON          = "[ОШИБКА] Неверный JSON от сервера:";
+const QString CLIENT_STARTING       = "[INFO] Client is starting...";
+const QString CONNECTION_ATTEMPT    = "[INFO] Attempting to connect to %1:%2...";
+const QString CONNECTED_SUCCESS     = "[OK] Successfully connected to server.";
+const QString CONNECTION_CONFIRMED  = "[OK] Connection confirmed. My ID:";
+const QString WAITING_START         = "[INFO] Waiting for 'start' command from server...";
+const QString START_RECEIVED        = "[START] 'start' command received. Starting data transmission.";
+const QString STOP_RECEIVED         = "[STOP] 'stop' command received. Stopping data transmission.";
+const QString CONFIG_RECEIVED       = "[CONFIG] New configuration received from server.";
+const QString CONFIG_PARAM          = "[CONFIG]";
+const QString DISCONNECTED          = "[ERROR] Connection to server lost.";
+const QString SOCKET_ERROR          = "[ERROR] Socket error:";
+const QString INVALID_JSON          = "[ERROR] Invalid JSON from server:";
 }
 
 /**

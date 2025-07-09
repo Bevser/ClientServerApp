@@ -1,7 +1,6 @@
 <RCC>
     <qresource prefix="/">
         <file>resource/icon.ico</file>
-        <file>resource/icon.png</file>
         <file>resource/settings.png</file>
         <file>resource/start.png</file>
         <file>resource/stop.png</file>

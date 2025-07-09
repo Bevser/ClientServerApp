@@ -1,30 +1,28 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
-#include <QQuickWindow>
 #include <QQuickStyle>
-#include "serverviewmodel.h"
+#include <QQuickWindow>
 
-int main(int argc, char *argv[])
-{
+#include "models/serverviewmodel.h"
+
+int main(int argc, char *argv[]) {
     QGuiApplication app(argc, argv);
+    app.setWindowIcon(QIcon(":/resource/icon.ico"));
 
-    QQuickWindow::setGraphicsApi(QSGRendererInterface::Vulkan);
+    QQuickWindow::setGraphicsApi(QSGRendererInterface::Software);
 
     QQmlApplicationEngine engine;
 
-    ServerViewModel serverViewModel;
+    ServerViewModel serverViewModel(&app);
+
     engine.rootContext()->setContextProperty("viewModel", &serverViewModel);
 
     QQuickStyle::setStyle("Universal");
-
-    QObject::connect(
-        &engine,
-        &QQmlApplicationEngine::objectCreationFailed,
-        &app,
-        []() { QCoreApplication::exit(-1); },
-        Qt::QueuedConnection);
     engine.loadFromModule("ServerApp", "Main");
+
+    if (engine.rootObjects().isEmpty())
+        return -1;
 
     return app.exec();
 }

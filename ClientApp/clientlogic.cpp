@@ -30,11 +30,15 @@ void ClientLogic::start() {
 }
 
 void ClientLogic::connectToServer() {
-    qInfo() << QString(Protocol::LogMessages::CONNECTION_ATTEMPT)
-                   .arg(m_host)
-                   .arg(m_port);
-    // Запускаем подключение
-    m_client->connectToHost(m_host, m_port);
+    if (m_client->isConnected()) {
+        m_client->disconnect();
+    } else {
+        qInfo() << QString(Protocol::LogMessages::CONNECTION_ATTEMPT)
+        .arg(m_host)
+            .arg(m_port);
+        // Запускаем подключение
+        m_client->connectToHost(m_host, m_port);
+    }
 }
 
 void ClientLogic::setupClientConnections() {
@@ -46,8 +50,11 @@ void ClientLogic::setupClientConnections() {
 
 void ClientLogic::handleClientConnected() {
     qInfo() << Protocol::LogMessages::CONNECTED_SUCCESS;
-    m_reconnectTimer->stop();  // Останавливаем таймер переподключения
     sendRegistrationRequest(); // Отправляем запрос на регистрацию
+    // Запускаем таймер для перерегестрации через 5 секунд
+    if (!m_reconnectTimer->isActive()) {
+        m_reconnectTimer->start(Protocol::Constants::RECONNECT_TIMEOUT);
+    }
 }
 
 void ClientLogic::handleClientDisconnected() {
@@ -80,6 +87,7 @@ void ClientLogic::handleDataReceived(const QByteArray &data) {
         if (json[Protocol::Keys::TYPE].toString() ==
             Protocol::MessageType::CONFIRMATION) {
             m_client->setId(json[Protocol::Keys::ID].toString());
+            m_reconnectTimer->stop();
             qInfo() << Protocol::LogMessages::CONNECTION_CONFIRMED << m_client->id();
             qInfo() << Protocol::LogMessages::WAITING_START;
         }

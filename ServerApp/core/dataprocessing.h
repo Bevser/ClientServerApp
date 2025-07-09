@@ -91,6 +91,11 @@ public slots:
      */
     void removeDisconnectedClients();
     /**
+     * @brief Удаляет клиента.
+     * @param state Указатель на состояние клиента.
+     */
+    void removeClient(ClientState &state);
+    /**
      * @brief Очищает все списки клиентов.
      */
     void clearClients();

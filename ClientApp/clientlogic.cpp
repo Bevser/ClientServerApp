@@ -329,3 +329,29 @@ QJsonObject ClientLogic::generateLog() {
     return log;
 }
 
+
+void ClientConfiguration::loadFromJson(const QJsonObject &json) {
+    if (json.contains(Protocol::Keys::MAX_CPU_TEMP))
+        maxCpuTemp = json[Protocol::Keys::MAX_CPU_TEMP].toString().toDouble();
+    if (json.contains(Protocol::Keys::MAX_CPU_USAGE))
+        maxCpuUsage = json[Protocol::Keys::MAX_CPU_USAGE].toString().toDouble();
+    if (json.contains(Protocol::Keys::MAX_MEMORY_USAGE))
+        maxMemoryUsage = json[Protocol::Keys::MAX_MEMORY_USAGE].toString().toDouble();
+    if (json.contains(Protocol::Keys::MAX_BAND_WIDTH))
+        maxBandWidth = json[Protocol::Keys::MAX_BAND_WIDTH].toString().toDouble();
+    if (json.contains(Protocol::Keys::MAX_LATENCY))
+        maxLatency = json[Protocol::Keys::MAX_LATENCY].toString().toDouble();
+    if (json.contains(Protocol::Keys::MAX_PACKET_LOSS))
+        maxPacketLoss = json[Protocol::Keys::MAX_PACKET_LOSS].toString().toDouble();
+}
+
+QJsonObject ClientConfiguration::toJson() const {
+    QJsonObject json;
+    json[Protocol::Keys::MAX_CPU_TEMP] = QString::number(maxCpuTemp, 'f', 2);
+    json[Protocol::Keys::MAX_CPU_USAGE] = QString::number(maxCpuUsage, 'f', 2);
+    json[Protocol::Keys::MAX_MEMORY_USAGE] = QString::number(maxMemoryUsage, 'f', 2);
+    json[Protocol::Keys::MAX_BAND_WIDTH] = QString::number(maxBandWidth, 'f', 2);
+    json[Protocol::Keys::MAX_LATENCY] = QString::number(maxLatency, 'f', 2);
+    json[Protocol::Keys::MAX_PACKET_LOSS] = QString::number(maxPacketLoss, 'f', 2);
+    return json;
+}

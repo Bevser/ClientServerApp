@@ -4,9 +4,9 @@ ServerViewModel::ServerViewModel(QObject *parent)
     : QObject(parent), m_clientSortOrder(Qt::AscendingOrder),
     m_dataSortOrder(Qt::AscendingOrder) {
 
-    m_clientTableModel = new ClientTableModel(this);
-    m_dataTableModel = new DataTableModel(this);
-    m_serverListModel = new ServerListModel(this);
+    m_clientTableModel  = new ClientTableModel(this);
+    m_dataTableModel    = new DataTableModel(this);
+    m_serverListModel   = new ServerListModel(this);
 
     // Настраиваем рабочий поток
     setupWorkerThread();
@@ -165,8 +165,7 @@ void ServerViewModel::handleServerStopped() {
     m_dataTableModel->clear();
 }
 
-void ServerViewModel::handleClientBatchUpdate(
-    const QList<QVariantMap> &clientBatch) {
+void ServerViewModel::handleClientBatchUpdate(const QList<QVariantMap> &clientBatch) {
     if (clientBatch.isEmpty()) {
         return;
     }

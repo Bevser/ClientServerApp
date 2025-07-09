@@ -1,3 +1,7 @@
+/**
+ * @file sharedkeys.h
+ * @brief Определяет строковые ключи, используемые для обмена данными.
+ */
 #ifndef SHAREDKEYS_H
 #define SHAREDKEYS_H
 
@@ -6,6 +10,13 @@
 
 #include "../common/protocol.h"
 
+/**
+ * @namespace Keys
+ * @brief Пространство имен для константных строковых ключей.
+ *
+ * Эти ключи используются для единообразного доступа к данным в QVariantMap и JSON
+ * объектах во всем приложении, предотвращая ошибки из-за опечаток.
+ */
 namespace Keys {
 Q_NAMESPACE
 // --- Ключи для UI (внутренние) ---

@@ -88,6 +88,7 @@ void TcpServer::handleClientDisconnected() {
     if (client) {
         emit clientDisconnected(client);
         emit logMessage(QString("Клиент отключен: %1").arg(client->id()));
+        removeClient(client);
     } else {
         emit logMessage("Невозможно определить отключившегося клиента.");
     }
